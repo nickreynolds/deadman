@@ -1,0 +1,58 @@
+# Deadman's Drop - Docker Compose Configuration for Local Development
+# Usage: docker-compose up
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: deadmans-drop-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: deadmans_drop
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d deadmans_drop"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Deadman's Drop Server
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: deadmans-drop-server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/deadmans_drop
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      JWT_EXPIRES_IN: 7d
+      STORAGE_PATH: /app/uploads
+      MAX_FILE_SIZE_MB: 500
+    volumes:
+      # Persist uploaded videos
+      - uploads_data:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local

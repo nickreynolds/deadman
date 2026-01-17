@@ -96,5 +96,26 @@
 - Supports absolute paths (e.g., /mnt/nas/deadmans-drop) or relative paths (e.g., ./uploads)
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 7: Create Docker configuration (2026-01-17)
+- Created server/Dockerfile with multi-stage build:
+  - Build stage: Uses node:20-alpine, installs pnpm, compiles TypeScript, generates Prisma client
+  - Production stage: Minimal image with only production dependencies
+  - Non-root user (deadman:nodejs) for security
+  - Health check configured for /health endpoint
+  - Default environment variables for production
+- Created server/docker-compose.yml for local development:
+  - PostgreSQL 15 service with health check and persistent volume
+  - Application service with dependency on healthy database
+  - Environment variables pre-configured for development
+  - Separate volumes for database data and uploads
+  - Port mapping: 3000 for app, 5432 for database
+- Created server/.dockerignore to exclude:
+  - node_modules, dist directories
+  - Environment files, git files
+  - IDE/editor files, logs
+  - Test files and coverage
+- Verified: docker compose config validates successfully
+- Verified: pnpm run build compiles successfully, pnpm test passes
+
 ## Next Task
-Task 7: Create Docker configuration
+Task 8: Set up logging framework
