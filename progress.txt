@@ -15,5 +15,17 @@
 - Added .gitignore for node_modules, dist, env files
 - Switched to pnpm (updated PRD accordingly)
 
+### Task 2: Set up Express.js server with middleware (2026-01-17)
+- Configured Express.js with essential middleware:
+  - helmet: Security headers (CSP, HSTS, X-Frame-Options, etc.)
+  - cors: Cross-Origin Resource Sharing enabled
+  - morgan: Request logging in 'combined' format
+- Added body parsing middleware (json, urlencoded)
+- Added health check endpoint at /health
+- Added 404 handler for undefined routes
+- Added global error handler
+- Port configurable via PORT environment variable (default: 3000)
+- Verified: server starts, CORS headers present, security headers applied, logging works
+
 ## Next Task
-Task 2: Set up Express.js server with middleware
+Task 3: Configure PostgreSQL connection
