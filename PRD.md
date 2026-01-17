@@ -491,8 +491,8 @@ Each task includes:
 - **Steps to Verify:**
   - tsconfig.json exists with strict mode enabled
   - package.json contains required dependencies
-  - `npm install` completes without errors
-  - `npm run build` compiles TypeScript successfully
+  - `pnpm install` completes without errors
+  - `pnpm run build` compiles TypeScript successfully
 - **Status:** NOT STARTED
 
 **Task 2: Set up Express.js server with middleware**
@@ -1014,7 +1014,7 @@ Each task includes:
 - **Steps to Verify:**
   - Script creates admin user with configured credentials
   - Script is idempotent (safe to run multiple times)
-  - Script can be run via npm script
+  - Script can be run via pnpm script
 - **Status:** NOT STARTED
 
 **Task 57: Write admin endpoint integration tests**
