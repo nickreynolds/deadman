@@ -3,7 +3,8 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
+import pinoHttp from 'pino-http';
+import logger from './logger';
 import { initializeConfig, getConfig } from './config';
 import { connectDatabase, disconnectDatabase } from './db';
 import { initializeStorage, StorageError } from './storage';
@@ -19,8 +20,20 @@ app.use(helmet());
 // CORS middleware - enables Cross-Origin Resource Sharing
 app.use(cors());
 
-// Request logging middleware
-app.use(morgan('combined'));
+// Request logging middleware using pino
+app.use(
+  pinoHttp({
+    logger,
+    // Don't log health check requests to reduce noise
+    autoLogging: {
+      ignore: (req) => req.url === '/health',
+    },
+    // Customize logged request/response properties
+    customProps: () => ({
+      service: 'deadmans-drop-http',
+    }),
+  })
+);
 
 // Body parsing middleware
 app.use(express.json());
@@ -37,14 +50,16 @@ app.use((_req: Request, res: Response) => {
 });
 
 // Global error handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Unhandled error:', err);
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  // Use request-scoped logger if available
+  const reqLogger = req.log || logger;
+  reqLogger.error({ err }, 'Unhandled error');
   res.status(500).json({ error: 'Internal server error' });
 });
 
 // Graceful shutdown handler
 async function shutdown(signal: string): Promise<void> {
-  console.log(`\n${signal} received, shutting down gracefully...`);
+  logger.info({ signal }, 'Shutdown signal received, shutting down gracefully...');
   await disconnectDatabase();
   process.exit(0);
 }
@@ -57,7 +72,7 @@ async function start(): Promise<void> {
       initializeStorage();
     } catch (error) {
       if (error instanceof StorageError) {
-        console.error(`Storage error: ${error.message}`);
+        logger.error({ error: error.message }, 'Storage initialization failed');
         process.exit(1);
       }
       throw error;
@@ -68,14 +83,14 @@ async function start(): Promise<void> {
 
     // Start listening
     const server = app.listen(config.port, () => {
-      console.log(`Deadman's Drop server running on port ${config.port}`);
+      logger.info({ port: config.port }, 'Deadman\'s Drop server started');
     });
 
     // Handle graceful shutdown
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.fatal({ err: error }, 'Failed to start server');
     process.exit(1);
   }
 }

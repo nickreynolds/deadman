@@ -139,15 +139,19 @@ export function getConfig(): Config {
  * Initialize the configuration
  * Call this once at application startup
  * Will exit the process with an error if configuration is invalid
+ *
+ * Note: This uses console.log instead of the logger because the logger
+ * depends on configuration being loaded first.
  */
 export function initializeConfig(): Config {
   try {
     configInstance = loadConfig();
-    console.log(`Configuration loaded (environment: ${configInstance.nodeEnv})`);
+    // Use console.log here since logger depends on config being loaded first
+    console.log(`[config] Configuration loaded (environment: ${configInstance.nodeEnv})`);
     return configInstance;
   } catch (error) {
     if (error instanceof ConfigurationError) {
-      console.error(`Configuration error: ${error.message}`);
+      console.error(`[config] Configuration error: ${error.message}`);
       process.exit(1);
     }
     throw error;

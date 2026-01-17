@@ -117,5 +117,38 @@
 - Verified: docker compose config validates successfully
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 8: Set up logging framework (2026-01-17)
+- Installed pino (v10.2.0) and pino-pretty (v13.1.3) for structured logging
+- Installed pino-http (v11.0.0) for Express request logging
+- Removed morgan package (replaced by pino-http)
+- Created src/logger.ts with:
+  - Configurable log levels (trace, debug, info, warn, error, fatal, silent)
+  - Environment-based defaults: "debug" in development, "info" in production
+  - Pretty-printed output for development (colorized, human-readable)
+  - JSON output for production (machine-parseable)
+  - Optional file logging with LOG_FILE environment variable
+  - Child logger support via createChildLogger() for component-specific context
+  - Timestamp included in all log entries
+- Updated src/index.ts:
+  - Replaced morgan with pino-http middleware
+  - Integrated request logging with main pino logger
+  - Health check requests excluded from logging to reduce noise
+  - All console.log/console.error replaced with structured logger calls
+- Updated src/config.ts:
+  - Added note explaining console.log usage (config loads before logger)
+  - Added [config] prefix to console logs for clarity
+- Updated src/db.ts:
+  - Created child logger for database component
+  - Wired Prisma logging events (query, info, warn, error) to pino
+  - Database queries logged at debug level with duration
+- Updated src/storage.ts:
+  - Created child logger for storage component
+  - All console.log replaced with structured logger calls
+- Updated .env.example with logging configuration:
+  - LOG_LEVEL: trace, debug, info, warn, error, fatal, silent
+  - LOG_PRETTY: true/false for pretty vs JSON output
+  - LOG_FILE: optional path for file logging
+- Verified: pnpm run build compiles successfully, pnpm test passes
+
 ## Next Task
-Task 8: Set up logging framework
+Task 9: Implement user model with password hashing

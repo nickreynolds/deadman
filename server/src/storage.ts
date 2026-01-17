@@ -4,6 +4,10 @@
 import fs from 'fs';
 import path from 'path';
 import { getConfig } from './config';
+import { createChildLogger } from './logger';
+
+// Create a child logger for storage operations
+const storageLogger = createChildLogger({ component: 'storage' });
 
 /**
  * Storage initialization error
@@ -47,7 +51,7 @@ function ensureDirectoryExists(dirPath: string): void {
   if (!fs.existsSync(dirPath)) {
     try {
       fs.mkdirSync(dirPath, { recursive: true });
-      console.log(`Created storage directory: ${dirPath}`);
+      storageLogger.info({ path: dirPath }, 'Created storage directory');
     } catch (error) {
       const err = error as NodeJS.ErrnoException;
       throw new StorageError(
@@ -91,7 +95,7 @@ export function initializeStorage(): StorageConfig {
   const rootPath = resolveStoragePath(config.storagePath);
   const maxFileSizeBytes = config.maxFileSizeMb * 1024 * 1024;
 
-  console.log(`Initializing storage at: ${rootPath}`);
+  storageLogger.info({ path: rootPath }, 'Initializing storage');
 
   // Create directory if needed
   ensureDirectoryExists(rootPath);
@@ -104,7 +108,10 @@ export function initializeStorage(): StorageConfig {
     maxFileSizeBytes,
   };
 
-  console.log(`Storage initialized successfully (max file size: ${config.maxFileSizeMb}MB)`);
+  storageLogger.info(
+    { path: rootPath, maxFileSizeMb: config.maxFileSizeMb },
+    'Storage initialized successfully'
+  );
 
   return storageConfig;
 }
