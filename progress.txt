@@ -10,9 +10,10 @@
   - Firebase Admin SDK, bcrypt, cors, helmet, morgan
 - Created tsconfig.json with strict mode enabled
 - Created src/index.ts entry point
-- Verified npm install completes without errors
-- Verified npm run build compiles TypeScript successfully
+- Verified pnpm install completes without errors
+- Verified pnpm run build compiles TypeScript successfully
 - Added .gitignore for node_modules, dist, env files
+- Switched to pnpm (updated PRD accordingly)
 
 ## Next Task
 Task 2: Set up Express.js server with middleware
