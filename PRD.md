@@ -1159,18 +1159,20 @@ Each task includes:
 
 Note: Email distribution configuration will be deferred pending additional research. The admin interface should be designed to accommodate future email settings.
 
+**Technology Stack:** React with react-query for data fetching and Tailwind CSS for styling.
+
 **Task 71: Create admin dashboard template**
 - **Category:** Frontend
-- **Description:** Build basic HTML/CSS admin dashboard template
+- **Description:** Build React admin dashboard with Tailwind CSS styling
 - **Steps to Verify:**
-  - Dashboard has consistent styling
+  - Dashboard has consistent Tailwind styling
   - Navigation between sections works
   - Responsive design for common screen sizes
 - **Status:** NOT STARTED
 
 **Task 72: Implement admin login page**
 - **Category:** Frontend
-- **Description:** Create admin login page with authentication
+- **Description:** Create admin login page with authentication using React and Tailwind
 - **Steps to Verify:**
   - Login form accepts username/password
   - Successful login redirects to dashboard
@@ -1180,40 +1182,44 @@ Note: Email distribution configuration will be deferred pending additional resea
 
 **Task 73: Create user management UI**
 - **Category:** Frontend
-- **Description:** Build UI for listing, creating, editing, and deleting users
+- **Description:** Build UI for listing, creating, editing, and deleting users using React with react-query for data fetching
 - **Steps to Verify:**
   - User list displays all users with key info
   - Create user form works correctly
   - Edit user form pre-fills existing values
   - Delete confirmation prevents accidental deletion
+  - react-query handles caching and refetching
 - **Status:** NOT STARTED
 
 **Task 74: Create system config UI**
 - **Category:** Frontend
-- **Description:** Build UI for editing system configuration (storage quota, notification times, etc.)
+- **Description:** Build UI for editing system configuration (storage quota, notification times, etc.) using React with react-query
 - **Steps to Verify:**
   - All config options are displayed
   - Changes save successfully
   - Validation prevents invalid values
   - Success/error feedback shown
+  - react-query manages config data state
 - **Status:** NOT STARTED
 
 **Task 75: Add system stats dashboard**
 - **Category:** Frontend
-- **Description:** Display system statistics (total users, videos, storage usage)
+- **Description:** Display system statistics (total users, videos, storage usage) using React with react-query for real-time data
 - **Steps to Verify:**
   - Stats are accurate and up-to-date
   - Dashboard loads within reasonable time
   - Key metrics are prominently displayed
+  - react-query handles data polling/refreshing
 - **Status:** NOT STARTED
 
 **Task 76: Serve admin interface from Express**
 - **Category:** Infrastructure
-- **Description:** Configure Express to serve admin interface on /admin/* routes
+- **Description:** Configure Express to serve React admin interface build on /admin/* routes
 - **Steps to Verify:**
   - Admin interface accessible at /admin
   - Static assets (CSS, JS) are served correctly
   - Non-admin users are redirected to login
+  - React Router handles client-side routing
 - **Status:** NOT STARTED
 
 ### 6.2 Mobile App Tasks (iOS)
