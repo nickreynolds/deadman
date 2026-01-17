@@ -1,0 +1,18 @@
+# Deadman's Drop - Development Progress
+
+## Completed Tasks
+
+### Task 1: Initialize Node.js + TypeScript project (2026-01-17)
+- Created server directory structure
+- Created package.json with all required dependencies:
+  - Express.js, TypeScript 5+, Prisma ORM
+  - Passport.js with JWT, Multer, node-cron
+  - Firebase Admin SDK, bcrypt, cors, helmet, morgan
+- Created tsconfig.json with strict mode enabled
+- Created src/index.ts entry point
+- Verified npm install completes without errors
+- Verified npm run build compiles TypeScript successfully
+- Added .gitignore for node_modules, dist, env files
+
+## Next Task
+Task 2: Set up Express.js server with middleware
