@@ -57,5 +57,26 @@
 - Created migration_lock.toml for PostgreSQL provider
 - Verified: schema validates, Prisma client generates, TypeScript builds
 
+### Task 5: Set up environment variable management (2026-01-17)
+- Added dotenv package (v17.2.3) for .env file loading
+- Created src/config.ts with:
+  - ConfigurationError class for validation errors
+  - getRequired() and getOptional() helper functions
+  - loadConfig() function to load and validate all environment variables
+  - initializeConfig() function for application startup (exits on error)
+  - getConfig() singleton accessor
+- Updated .env.example with comprehensive documentation:
+  - SERVER: PORT, NODE_ENV
+  - DATABASE: DATABASE_URL (required)
+  - AUTHENTICATION: JWT_SECRET (required), JWT_EXPIRES_IN
+  - STORAGE: STORAGE_PATH, MAX_FILE_SIZE_MB
+  - FIREBASE: Optional push notification credentials
+- Updated src/index.ts to:
+  - Initialize config before other imports that depend on it
+  - Use config.port instead of process.env.PORT
+- Updated src/db.ts to use config.isDevelopment for logging level
+- Verified: missing required variables cause clear startup failure
+- Verified: pnpm run build compiles successfully, pnpm test passes
+
 ## Next Task
-Task 5: Set up environment variable management
+Task 6: Configure file storage path

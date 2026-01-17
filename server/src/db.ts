@@ -1,10 +1,12 @@
 // Database connection using Prisma
 
 import { PrismaClient } from '@prisma/client';
+import { getConfig } from './config';
 
 // Create a singleton Prisma client
+// Note: Config must be initialized before this module is imported
 const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['warn', 'error'],
+  log: getConfig().isDevelopment ? ['query', 'info', 'warn', 'error'] : ['warn', 'error'],
 });
 
 /**

@@ -4,12 +4,13 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { initializeConfig, getConfig } from './config';
 import { connectDatabase, disconnectDatabase } from './db';
 
-const app = express();
+// Initialize configuration first - exits if required variables are missing
+const config = initializeConfig();
 
-// Default port, can be overridden via environment variable
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const app = express();
 
 // Security middleware - adds various HTTP headers for security
 app.use(helmet());
@@ -54,8 +55,8 @@ async function start(): Promise<void> {
     await connectDatabase();
 
     // Start listening
-    const server = app.listen(PORT, () => {
-      console.log(`Deadman's Drop server running on port ${PORT}`);
+    const server = app.listen(config.port, () => {
+      console.log(`Deadman's Drop server running on port ${config.port}`);
     });
 
     // Handle graceful shutdown
