@@ -10,8 +10,97 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Placeholder model to enable Prisma client generation
-// Full schema will be implemented in Task 4
+// 4.1 User
+model User {
+  id                String   @id @default(uuid()) @db.Uuid
+  username          String   @unique
+  passwordHash      String   @map("password_hash")
+  isAdmin           Boolean  @default(false) @map("is_admin")
+  storageQuotaBytes BigInt   @default(1073741824) @map("storage_quota_bytes") // 1GB default
+  storageUsedBytes  BigInt   @default(0) @map("storage_used_bytes")
+  defaultTimerDays  Int      @default(7) @map("default_timer_days")
+  fcmToken          String?  @map("fcm_token")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  videos     Video[]
+  recipients DistributionRecipient[]
+
+  @@map("users")
+}
+
+// 4.2 Video - Status enum
+enum VideoStatus {
+  PENDING
+  ACTIVE
+  DISTRIBUTED
+  EXPIRED
+
+  @@map("video_status")
+}
+
+// 4.2 Video
+model Video {
+  id            String      @id @default(uuid()) @db.Uuid
+  userId        String      @map("user_id") @db.Uuid
+  title         String
+  filePath      String      @map("file_path")
+  fileSizeBytes BigInt      @map("file_size_bytes")
+  mimeType      String      @map("mime_type")
+  status        VideoStatus @default(PENDING)
+  distributeAt  DateTime    @map("distribute_at")
+  distributedAt DateTime?   @map("distributed_at")
+  expiresAt     DateTime?   @map("expires_at")
+  publicToken   String      @unique @default(uuid()) @map("public_token") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkIns CheckIn[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([distributeAt])
+  @@index([publicToken])
+  @@map("videos")
+}
+
+// 4.3 DistributionRecipient
+model DistributionRecipient {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  email     String
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("distribution_recipients")
+}
+
+// 4.4 CheckIn - Action enum
+enum CheckInAction {
+  PREVENT_DISTRIBUTION
+  ALLOW_DISTRIBUTION
+
+  @@map("check_in_action")
+}
+
+// 4.4 CheckIn
+model CheckIn {
+  id        String        @id @default(uuid()) @db.Uuid
+  videoId   String        @map("video_id") @db.Uuid
+  action    CheckInAction
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@map("check_ins")
+}
+
+// 4.5 SystemConfig
 model SystemConfig {
   key       String   @id
   value     String

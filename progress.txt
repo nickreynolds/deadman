@@ -42,5 +42,20 @@
 - Added SystemConfig placeholder model to enable Prisma client generation
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 4: Create database schema migrations (2026-01-17)
+- Updated prisma/schema.prisma with all data models from PRD section 4:
+  - User: UUID id, username, password_hash, is_admin, storage quota/usage, timer settings, FCM token
+  - Video: UUID id, user relation, title, file path/size/mime, status enum, distribution timestamps, public token
+  - DistributionRecipient: UUID id, user relation, email, name
+  - CheckIn: UUID id, video relation, action enum (PREVENT/ALLOW_DISTRIBUTION)
+  - SystemConfig: key-value pairs with timestamps
+- Created enums: VideoStatus (PENDING, ACTIVE, DISTRIBUTED, EXPIRED), CheckInAction
+- Added appropriate indexes for queries (userId, status, distributeAt, publicToken)
+- Configured cascade deletes for related records
+- Created initial migration: prisma/migrations/20260117000000_initial_schema/migration.sql
+- Created rollback migration: prisma/migrations/20260117000000_initial_schema/down.sql
+- Created migration_lock.toml for PostgreSQL provider
+- Verified: schema validates, Prisma client generates, TypeScript builds
+
 ## Next Task
-Task 4: Create database schema migrations
+Task 5: Set up environment variable management
