@@ -4,6 +4,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { connectDatabase, disconnectDatabase } from './db';
 
 const app = express();
 
@@ -39,7 +40,31 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// Graceful shutdown handler
+async function shutdown(signal: string): Promise<void> {
+  console.log(`\n${signal} received, shutting down gracefully...`);
+  await disconnectDatabase();
+  process.exit(0);
+}
+
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Deadman's Drop server running on port ${PORT}`);
-});
+async function start(): Promise<void> {
+  try {
+    // Connect to database
+    await connectDatabase();
+
+    // Start listening
+    const server = app.listen(PORT, () => {
+      console.log(`Deadman's Drop server running on port ${PORT}`);
+    });
+
+    // Handle graceful shutdown
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+start();

@@ -8,7 +8,7 @@
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "lint": "eslint src/**/*.ts",
-    "test": "jest"
+    "test": "jest --passWithNoTests"
   },
   "engines": {
     "node": ">=20.0.0"

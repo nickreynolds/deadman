@@ -1,0 +1,21 @@
+// Deadman's Drop - Prisma Schema
+// See PRD section 4 for full data model specification
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Placeholder model to enable Prisma client generation
+// Full schema will be implemented in Task 4
+model SystemConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("system_config")
+}
