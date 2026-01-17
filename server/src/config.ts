@@ -82,6 +82,9 @@ export interface Config {
   firebaseProjectId?: string;
   firebasePrivateKey?: string;
   firebaseClientEmail?: string;
+
+  // Security
+  bcryptRounds: number;
 }
 
 /**
@@ -114,6 +117,9 @@ export function loadConfig(): Config {
     firebaseProjectId: process.env.FIREBASE_PROJECT_ID || undefined,
     firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || undefined,
     firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || undefined,
+
+    // Security configuration
+    bcryptRounds: getOptionalInt('BCRYPT_ROUNDS', 12),
   };
 
   return config;
