@@ -78,5 +78,23 @@
 - Verified: missing required variables cause clear startup failure
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 6: Configure file storage path (2026-01-17)
+- Created src/storage.ts with:
+  - StorageError class for initialization errors
+  - StorageConfig interface with rootPath and maxFileSizeBytes
+  - resolveStoragePath() to handle both absolute and relative paths
+  - ensureDirectoryExists() to create directory with recursive parent creation
+  - verifyWritePermissions() to test write access via temp file creation
+  - initializeStorage() main function called at startup
+  - getStorageConfig() singleton accessor
+  - Helper functions: getVideoPath(), getUserStoragePath(), ensureUserStorageDirectory()
+- Updated src/index.ts to:
+  - Import and call initializeStorage() during startup
+  - Handle StorageError with clear error message and exit
+  - Storage initialized before database connection
+- Storage path configurable via STORAGE_PATH environment variable (already in .env.example)
+- Supports absolute paths (e.g., /mnt/nas/deadmans-drop) or relative paths (e.g., ./uploads)
+- Verified: pnpm run build compiles successfully, pnpm test passes
+
 ## Next Task
-Task 6: Configure file storage path
+Task 7: Create Docker configuration

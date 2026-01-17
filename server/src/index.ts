@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { initializeConfig, getConfig } from './config';
 import { connectDatabase, disconnectDatabase } from './db';
+import { initializeStorage, StorageError } from './storage';
 
 // Initialize configuration first - exits if required variables are missing
 const config = initializeConfig();
@@ -51,6 +52,17 @@ async function shutdown(signal: string): Promise<void> {
 // Start the server
 async function start(): Promise<void> {
   try {
+    // Initialize storage (creates directory if needed, verifies permissions)
+    try {
+      initializeStorage();
+    } catch (error) {
+      if (error instanceof StorageError) {
+        console.error(`Storage error: ${error.message}`);
+        process.exit(1);
+      }
+      throw error;
+    }
+
     // Connect to database
     await connectDatabase();
 
