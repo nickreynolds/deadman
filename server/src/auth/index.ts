@@ -1,5 +1,5 @@
 // Authentication module exports
-// Consolidates JWT and Passport functionality
+// Consolidates JWT, Passport, and middleware functionality
 
 export {
   generateToken,
@@ -17,3 +17,9 @@ export {
   passport,
   type AuthenticatedUser,
 } from './passport';
+
+export {
+  requireAuth,
+  isAuthenticated,
+  getAuthenticatedUser,
+} from './middleware';

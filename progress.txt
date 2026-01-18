@@ -221,5 +221,19 @@
 - All error cases logged appropriately
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 13: Create authentication middleware (2026-01-18)
+- Created src/auth/middleware.ts with authentication middleware:
+  - requireAuth(): Express middleware that validates JWT tokens via Passport
+    - Returns 401 Unauthorized if no token, invalid token, or user not found
+    - Attaches authenticated user to req.user on success
+    - Uses Passport's JWT strategy configured in Task 10
+    - Logs authentication failures with reason for debugging
+  - isAuthenticated(): Type guard for TypeScript type narrowing
+  - getAuthenticatedUser(): Helper to get user from request (throws if not authenticated)
+- Updated src/auth/index.ts to export new middleware functions
+- Middleware properly chains with existing Passport configuration
+- All error cases logged appropriately with structured logging
+- Verified: pnpm run build compiles successfully, pnpm test passes
+
 ## Next Task
-Task 13: Create authentication middleware
+Task 14: Create admin authorization middleware
