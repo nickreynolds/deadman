@@ -8,7 +8,7 @@ fi
 
 for ((i=1; i<=$1; i++)); do
   result=$(docker sandbox run claude --permission-mode acceptEdits -p "@PRD.md @progress.txt \
-  1. Find the highest-priority task and implement it. \
+  1. Find the highest-priority task and implement it. Prioritze the Android app over the iOS app. \
   2. If a task feels too complex, break it down into smaller tasks. \
   3. If you need clarification, update the task with a request for clarification and set the status to NEEDS_CLARIFICATION and output <promise>NEEDS_CLARIFICATION</promise>. \
   3. Run your tests and type checks. \
