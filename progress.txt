@@ -169,5 +169,28 @@
   - Passwords never logged (only user IDs and usernames in logs)
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 10: Set up Passport.js with JWT strategy (2026-01-18)
+- Created src/auth/ directory with authentication modules:
+  - jwt.service.ts: JWT token generation and verification
+    - generateToken(): Creates JWT with user ID, username, isAdmin
+    - verifyToken(): Validates and decodes JWT tokens
+    - isTokenExpiring(): Checks if token is near expiration
+    - extractTokenFromHeader(): Parses Bearer token from Authorization header
+  - passport.ts: Passport.js configuration
+    - JWT strategy configured with HS256 algorithm
+    - Token extracted from Authorization header (Bearer scheme)
+    - User lookup from database on each authenticated request
+    - AuthenticatedUser type excludes passwordHash for security
+  - index.ts: Module exports for clean imports
+- Updated src/index.ts:
+  - Imported and configured Passport at startup
+  - Added passport.initialize() middleware
+- Token configuration:
+  - JWT_SECRET (required): Secret key for signing tokens
+  - JWT_EXPIRES_IN (optional, default: '7d'): Token expiration
+  - Supports formats: '7d', '24h', '60m', '3600s', or seconds
+- TypeScript type augmentation for Express.Request.user
+- Verified: pnpm run build compiles successfully, pnpm test passes
+
 ## Next Task
-Task 10: Set up Passport.js with JWT strategy
+Task 11: Implement login endpoint

@@ -577,7 +577,7 @@ Each task includes:
   - JWT tokens are generated with configurable expiration
   - Token validation correctly identifies users
   - Invalid/expired tokens are rejected with 401
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 11: Implement login endpoint**
 - **Category:** API

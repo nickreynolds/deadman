@@ -8,6 +8,7 @@ import logger from './logger';
 import { initializeConfig, getConfig } from './config';
 import { connectDatabase, disconnectDatabase } from './db';
 import { initializeStorage, StorageError } from './storage';
+import { configurePassport, passport } from './auth';
 
 // Initialize configuration first - exits if required variables are missing
 const config = initializeConfig();
@@ -38,6 +39,10 @@ app.use(
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Initialize Passport.js authentication
+configurePassport();
+app.use(passport.initialize());
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
