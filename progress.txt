@@ -208,5 +208,18 @@
 - All error cases logged appropriately
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 12: Implement token refresh endpoint (2026-01-18)
+- Created POST /api/auth/refresh endpoint in src/routes/auth.routes.ts:
+  - Validates required token field (returns 400 if missing/empty)
+  - Verifies existing token using jwt.service.verifyToken()
+  - Rejects expired tokens with 401 and appropriate error message
+  - Verifies user still exists in database (prevents token refresh for deleted users)
+  - Generates new JWT token with fresh expiration on success
+  - Returns { token: string } matching API specification
+- Imported findUserById from user.service for user existence verification
+- Imported verifyToken and DecodedToken from jwt.service
+- All error cases logged appropriately
+- Verified: pnpm run build compiles successfully, pnpm test passes
+
 ## Next Task
-Task 12: Implement token refresh endpoint
+Task 13: Create authentication middleware
