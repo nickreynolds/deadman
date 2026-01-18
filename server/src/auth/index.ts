@@ -20,6 +20,8 @@ export {
 
 export {
   requireAuth,
+  requireAdmin,
   isAuthenticated,
+  isAdmin,
   getAuthenticatedUser,
 } from './middleware';

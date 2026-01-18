@@ -613,7 +613,7 @@ Each task includes:
   - Non-admin users receive 403 on admin routes
   - Admin users can access admin routes
   - Middleware properly chains with authentication middleware
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 15: Write authentication unit tests**
 - **Category:** Testing

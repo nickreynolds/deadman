@@ -235,5 +235,21 @@
 - All error cases logged appropriately with structured logging
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 14: Create admin authorization middleware (2026-01-18)
+- Created requireAdmin middleware in src/auth/middleware.ts:
+  - Checks if authenticated user has isAdmin: true
+  - Returns 403 Forbidden with message "Admin privileges required" for non-admin users
+  - Returns 401 Unauthorized if called without prior authentication (safety check)
+  - Properly chains with requireAuth middleware (must be used after requireAuth)
+  - Logs admin access attempts with user ID, username, path for auditing
+- Created isAdmin() type guard helper function:
+  - Returns boolean indicating if current user is an admin
+  - Useful for TypeScript type narrowing in route handlers
+- Updated src/auth/index.ts to export:
+  - requireAdmin middleware
+  - isAdmin helper function
+- Usage pattern: app.get('/api/admin/users', requireAuth, requireAdmin, handler)
+- Verified: pnpm run build compiles successfully, pnpm test passes
+
 ## Next Task
-Task 14: Create admin authorization middleware
+Task 15: Write authentication unit tests
