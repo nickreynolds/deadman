@@ -387,5 +387,23 @@
 - Total: 154 tests, all passing (18 new title generator tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (154 tests)
 
+### Task 21: Update storage usage tracking (2026-01-18)
+- This task was already implemented as part of Task 17 (video upload endpoint)
+- Storage usage tracking implemented in video.service.ts:
+  - updateUserStorageUsage() uses Prisma's atomic increment operation (lines 151-162)
+  - Supports both positive (add) and negative (subtract) byte changes
+  - Uses BigInt for accurate byte-level calculations
+- Called after successful upload in video.routes.ts (line 156):
+  - updateUserStorageUsage(user.id, fileSizeBytes) called after createVideo()
+- Concurrent upload safety:
+  - Prisma's increment operation is atomic at database level
+  - No race conditions between concurrent uploads
+- Existing unit tests verify:
+  - Storage increment with positive values
+  - Storage decrement with negative values
+  - Quota checking with various scenarios
+- Total: 154 tests, all passing
+- Verified: pnpm run build compiles successfully, pnpm test passes (154 tests)
+
 ## Next Task
-Task 21: Update storage usage tracking
+Task 22: Calculate distribution timestamp
