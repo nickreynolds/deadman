@@ -586,7 +586,7 @@ Each task includes:
   - Valid credentials return JWT token and user info
   - Invalid credentials return 401 with error message
   - Response matches API specification
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 12: Implement token refresh endpoint**
 - **Category:** API

@@ -9,6 +9,7 @@ import { initializeConfig, getConfig } from './config';
 import { connectDatabase, disconnectDatabase } from './db';
 import { initializeStorage, StorageError } from './storage';
 import { configurePassport, passport } from './auth';
+import { authRoutes } from './routes';
 
 // Initialize configuration first - exits if required variables are missing
 const config = initializeConfig();
@@ -48,6 +49,9 @@ app.use(passport.initialize());
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// API routes
+app.use('/api/auth', authRoutes);
 
 // 404 handler for undefined routes
 app.use((_req: Request, res: Response) => {

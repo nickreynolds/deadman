@@ -192,5 +192,21 @@
 - TypeScript type augmentation for Express.Request.user
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 11: Implement login endpoint (2026-01-18)
+- Created src/routes/auth.routes.ts with POST /api/auth/login endpoint:
+  - Validates required fields (username, password)
+  - Returns 400 for missing/empty fields
+  - Uses validateCredentials() from user service for authentication
+  - Returns 401 for invalid credentials (constant-time to prevent timing attacks)
+  - On success, generates JWT token using jwt.service
+  - Returns token and user info matching API specification:
+    - { token: string, user: { id, username, is_admin } }
+- Created src/routes/index.ts to export route modules
+- Updated src/index.ts:
+  - Imported authRoutes from routes module
+  - Mounted auth routes at /api/auth
+- All error cases logged appropriately
+- Verified: pnpm run build compiles successfully, pnpm test passes
+
 ## Next Task
-Task 11: Implement login endpoint
+Task 12: Implement token refresh endpoint
