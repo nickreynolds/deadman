@@ -150,5 +150,24 @@
   - LOG_FILE: optional path for file logging
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 9: Implement user model with password hashing (2026-01-18)
+- Created src/services/user.service.ts with comprehensive user management:
+  - hashPassword(): Hashes passwords using bcrypt with configurable rounds
+  - verifyPassword(): Securely verifies passwords against stored hashes
+  - createUser(): Creates users with hashed passwords (never stores plaintext)
+  - validateCredentials(): Validates login credentials with timing-attack protection
+  - findUserByUsername(), findUserById(): User lookup functions
+  - updatePassword(): Updates user password with proper hashing
+  - getAllUsers(), updateUser(), deleteUser(): Admin user management functions
+- Password hashing configuration:
+  - BCRYPT_ROUNDS environment variable (default: 12, minimum: 10)
+  - Configurable via src/config.ts with validation
+  - Documented in .env.example with security recommendations
+- Security features:
+  - Constant-time comparison to prevent timing attacks on username enumeration
+  - Minimum 10 rounds enforced even if lower value configured
+  - Passwords never logged (only user IDs and usernames in logs)
+- Verified: pnpm run build compiles successfully, pnpm test passes
+
 ## Next Task
-Task 9: Implement user model with password hashing
+Task 10: Set up Passport.js with JWT strategy

@@ -568,7 +568,7 @@ Each task includes:
   - Passwords are hashed before storage (never stored in plaintext)
   - Password verification works correctly
   - Hash rounds are configurable (minimum 10)
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 10: Set up Passport.js with JWT strategy**
 - **Category:** Authentication
