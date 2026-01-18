@@ -689,7 +689,7 @@ Each task includes:
   - distribute_at equals upload time + default_timer_days
   - User's configured timer value is used
   - Timestamp is stored in UTC
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 23: Implement failed upload cleanup**
 - **Category:** Error Handling

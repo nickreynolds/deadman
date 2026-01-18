@@ -12,23 +12,12 @@ import {
 } from '../services/video.service';
 import { createChildLogger } from '../logger';
 import { getUserStoragePath } from '../storage';
-import { generateAutoTitle } from '../utils/title-generator';
+import { generateAutoTitle, calculateDistributeAt } from '../utils';
 import path from 'path';
 
 const logger = createChildLogger({ component: 'video-routes' });
 
 const router: Router = Router();
-
-/**
- * Calculate distribution timestamp based on user's timer setting
- * @param timerDays - Number of days until distribution
- * @returns Date object for distribution time
- */
-function calculateDistributeAt(timerDays: number): Date {
-  const now = new Date();
-  now.setDate(now.getDate() + timerDays);
-  return now;
-}
 
 /**
  * POST /api/videos/upload

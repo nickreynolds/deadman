@@ -405,5 +405,29 @@
 - Total: 154 tests, all passing
 - Verified: pnpm run build compiles successfully, pnpm test passes (154 tests)
 
+### Task 22: Calculate distribution timestamp (2026-01-18)
+- Created src/utils/distribution.ts with distribution timestamp utilities:
+  - calculateDistributeAt(): Adds user's timer days to upload time
+    - Takes optional fromDate parameter for testing
+    - Returns Date object for scheduled distribution time in UTC
+    - Does not mutate input date
+  - shouldDistribute(): Checks if video should be distributed (distributeAt <= now)
+    - Used by background jobs to find videos ready for distribution
+  - calculateExpiresAt(): Calculates expiration (7 days after distribution)
+    - Used for automatic video cleanup after distribution
+- Updated src/utils/index.ts to export new functions
+- Updated src/routes/video.routes.ts:
+  - Removed inline calculateDistributeAt function
+  - Imported calculateDistributeAt from utils module
+  - Upload endpoint uses user's default_timer_days setting (line 120)
+  - Timestamp stored in UTC (JavaScript Date + Prisma)
+- Created comprehensive unit tests (src/utils/distribution.test.ts):
+  - Tests for calculateDistributeAt(): basic functionality, edge cases (month/year boundaries, leap year), typical timer settings
+  - Tests for shouldDistribute(): past/future/exact time comparisons, millisecond precision
+  - Tests for calculateExpiresAt(): basic functionality, edge cases
+  - Integration test for full distribution lifecycle (upload -> distribution -> expiration)
+- Total: 180 tests, all passing (26 new distribution tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (180 tests)
+
 ## Next Task
-Task 22: Calculate distribution timestamp
+Task 23: Implement failed upload cleanup
