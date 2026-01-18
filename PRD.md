@@ -653,7 +653,7 @@ Each task includes:
   - Files exceeding size limit are rejected with 413
   - Uploads exceeding user quota are rejected with appropriate error
   - Error messages clearly indicate the limit exceeded
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 19: Generate public token for videos**
 - **Category:** Security

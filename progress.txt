@@ -330,5 +330,23 @@
 - Updated src/index.ts to mount video routes at /api/videos
 - Verified: pnpm run build compiles successfully, pnpm test passes (106 tests)
 
+### Task 18: Add file size and quota validation (2026-01-18)
+- This task was already implemented as part of Task 17 (video upload endpoint)
+- File size limits enforced via Multer configuration:
+  - MAX_FILE_SIZE_MB environment variable (default 500 MB)
+  - Multer's limits.fileSize setting in upload.ts
+  - LIMIT_FILE_SIZE error returns 413 with max size message
+- User quota validation in video.routes.ts:
+  - Pre-upload check rejects users with no remaining quota (413)
+  - Post-upload check validates file fits in remaining space
+  - Returns 413 with detailed quota information on failure
+- Error messages include:
+  - File size (human-readable format)
+  - Quota limit (bytes)
+  - Used storage (bytes)
+  - Remaining storage (bytes)
+- Existing tests in upload.test.ts verify LIMIT_FILE_SIZE handling
+- Verified: pnpm run build compiles successfully, pnpm test passes (106 tests)
+
 ## Next Task
-Task 18: Add file size and quota validation
+Task 19: Generate public token for videos
