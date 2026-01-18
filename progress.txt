@@ -429,5 +429,33 @@
 - Total: 180 tests, all passing (26 new distribution tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (180 tests)
 
+### Task 23: Implement failed upload cleanup (2026-01-18)
+- Created src/services/cleanup.service.ts with comprehensive cleanup functionality:
+  - cleanupFile(): Deletes a single file from disk safely (handles errors gracefully)
+  - findOrphanedFiles(): Scans storage directories to find files not in database
+  - cleanupOrphanedFiles(): Removes orphaned files older than maxAgeMs (default 1 hour)
+    - Skips hidden directories (like .temp) during scanning
+    - Only deletes files older than threshold to avoid removing in-progress uploads
+    - Returns CleanupResult with filesRemoved, bytesFreed, and errors
+  - cleanupTempFiles(): Cleans up old files in the .temp directory
+  - runFullCleanup(): Runs both orphaned and temp file cleanup
+- Existing cleanup in video.routes.ts was already handling:
+  - Cleanup on quota exceeded after file upload (line 99)
+  - Cleanup on any server error during processing (line 174)
+  - Database records only created after successful file processing
+  - Storage usage only incremented after successful video creation
+- The cleanup service adds:
+  - Periodic cleanup capability for orphaned files (to be called by job scheduler in Task 61)
+  - Recovery from server crashes/restarts where uploads were interrupted
+  - Safe handling of concurrent uploads (1 hour age threshold)
+- Created comprehensive unit tests (src/services/cleanup.service.test.ts):
+  - Tests for cleanupFile(): file exists, doesn't exist, error handling
+  - Tests for findOrphanedFiles(): empty storage, identifying orphans, skipping .temp
+  - Tests for cleanupOrphanedFiles(): age filtering, cleanup tracking, error handling
+  - Tests for cleanupTempFiles(): directory missing, old files, skip directories
+  - Tests for runFullCleanup(): combining results, aggregating errors
+- Total: 196 tests, all passing (16 new cleanup service tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (196 tests)
+
 ## Next Task
-Task 23: Implement failed upload cleanup
+Task 24: Write upload integration tests

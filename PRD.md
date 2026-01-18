@@ -698,7 +698,7 @@ Each task includes:
   - Failed uploads don't leave orphan files
   - Database records are not created for failed uploads
   - Storage usage is not incremented for failed uploads
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 24: Write upload integration tests**
 - **Category:** Testing
