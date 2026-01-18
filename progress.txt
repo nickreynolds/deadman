@@ -348,5 +348,23 @@
 - Existing tests in upload.test.ts verify LIMIT_FILE_SIZE handling
 - Verified: pnpm run build compiles successfully, pnpm test passes (106 tests)
 
+### Task 19: Generate public token for videos (2026-01-18)
+- Public token generation already implemented via Prisma schema:
+  - schema.prisma line 54: `publicToken String @unique @default(uuid()) @map("public_token") @db.Uuid`
+  - Prisma auto-generates UUID v4 for each video on creation
+  - Token is indexed for fast lookups: `@@index([publicToken])`
+- Token included in upload response (video.routes.ts line 184):
+  - Response includes `public_token: video.publicToken`
+- Created comprehensive video service tests (src/services/video.service.test.ts):
+  - Tests for createVideo() - verifies publicToken is returned
+  - Tests for findVideoById() and findVideoByPublicToken()
+  - Tests for getVideosByUser() with pagination and filtering
+  - Tests for updateVideoTitle() and deleteVideo()
+  - Tests for updateUserStorageUsage() and checkUserStorageQuota()
+  - Tests for getUserDefaultTimerDays()
+  - Specific tests for public token generation verifying UUID format
+- Total: 136 tests, all passing (30 new video service tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (136 tests)
+
 ## Next Task
-Task 19: Generate public token for videos
+Task 20: Auto-generate video titles

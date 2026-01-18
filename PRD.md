@@ -662,7 +662,7 @@ Each task includes:
   - Each video has a unique public_token UUID
   - Token is included in upload response
   - Token format is valid UUID v4
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 20: Auto-generate video titles**
 - **Category:** Business Logic
