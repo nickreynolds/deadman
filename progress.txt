@@ -366,5 +366,26 @@
 - Total: 136 tests, all passing (30 new video service tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (136 tests)
 
+### Task 20: Auto-generate video titles (2026-01-18)
+- Created src/utils/title-generator.ts with generateAutoTitle() function:
+  - Generates title format: "Video YYYY-MM-DD HH:MM" or "Video YYYY-MM-DD HH:MM - Location"
+  - Optional location parameter for including location data from mobile devices
+  - Location is trimmed and truncated to 50 characters max
+  - Second optional date parameter for testing purposes
+- Created src/utils/index.ts to export utility functions
+- Updated src/routes/video.routes.ts:
+  - Import generateAutoTitle from utils module
+  - Accept optional "location" field in multipart/form-data request
+  - When no title is provided, auto-generate using timestamp and optional location
+  - User-provided titles are preserved (takes precedence over auto-generation)
+  - Updated API documentation to include location field
+- Created comprehensive unit tests (src/utils/title-generator.test.ts):
+  - Tests for basic title generation (date/time format, "Video" prefix)
+  - Tests for location handling (included, empty, whitespace-only, trimming, truncation)
+  - Tests for different location formats (city, address, coordinates, unicode, special chars)
+  - Tests for default date behavior
+- Total: 154 tests, all passing (18 new title generator tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (154 tests)
+
 ## Next Task
-Task 20: Auto-generate video titles
+Task 21: Update storage usage tracking

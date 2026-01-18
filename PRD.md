@@ -671,7 +671,7 @@ Each task includes:
   - Videos without user-provided title get auto-generated title
   - Title includes date/time information
   - User-provided titles are preserved
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 21: Update storage usage tracking**
 - **Category:** Business Logic

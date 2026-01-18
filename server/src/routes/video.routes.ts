@@ -12,22 +12,12 @@ import {
 } from '../services/video.service';
 import { createChildLogger } from '../logger';
 import { getUserStoragePath } from '../storage';
+import { generateAutoTitle } from '../utils/title-generator';
 import path from 'path';
 
 const logger = createChildLogger({ component: 'video-routes' });
 
 const router: Router = Router();
-
-/**
- * Generate an auto-generated title from timestamp
- * Format: "Video YYYY-MM-DD HH:MM"
- */
-function generateAutoTitle(): string {
-  const now = new Date();
-  const date = now.toISOString().split('T')[0];
-  const time = now.toTimeString().slice(0, 5);
-  return `Video ${date} ${time}`;
-}
 
 /**
  * Calculate distribution timestamp based on user's timer setting
@@ -47,6 +37,7 @@ function calculateDistributeAt(timerDays: number): Date {
  * Request: multipart/form-data
  *   - video: file (required)
  *   - title: string (optional, auto-generated if empty)
+ *   - location: string (optional, included in auto-generated title if no title provided)
  *
  * Response:
  *   - 200: { video: { id, title, file_size_bytes, distribute_at, public_token, ... } }
@@ -142,7 +133,10 @@ router.post(
       const distributeAt = calculateDistributeAt(timerDays);
 
       // Get title from request or auto-generate
-      const title = (req.body.title as string)?.trim() || generateAutoTitle();
+      // If no title provided, generate one using timestamp and optional location
+      const userTitle = (req.body.title as string)?.trim();
+      const location = (req.body.location as string)?.trim();
+      const title = userTitle || generateAutoTitle(location);
 
       // Store relative path from storage root for portability
       const userStoragePath = getUserStoragePath(user.id);
