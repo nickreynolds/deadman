@@ -251,5 +251,33 @@
 - Usage pattern: app.get('/api/admin/users', requireAuth, requireAdmin, handler)
 - Verified: pnpm run build compiles successfully, pnpm test passes
 
+### Task 15: Write authentication unit tests (2026-01-18)
+- Set up Jest testing framework with proper configuration:
+  - Created jest.config.js with ts-jest preset for TypeScript support
+  - Created src/test/setup.ts with test environment variables
+  - Created src/test/mocks.ts with mock helpers (mockConfig, createMockUser, createMockAdminUser)
+- Created comprehensive unit tests for JWT service (src/auth/jwt.service.test.ts):
+  - Tests for generateToken() - token generation, payload content, expiration
+  - Tests for verifyToken() - valid tokens, invalid tokens, expired tokens, tampered signatures
+  - Tests for isTokenExpiring() - fresh tokens, expiring tokens, custom buffer time
+  - Tests for getTokenExpirationSeconds() - parsing various time formats (days, hours, minutes, seconds)
+  - Tests for extractTokenFromHeader() - Bearer token extraction, edge cases
+- Created comprehensive unit tests for user service (src/services/user.service.test.ts):
+  - Tests for hashPassword() - bcrypt hashing, hash format verification
+  - Tests for verifyPassword() - correct/incorrect password verification
+  - Tests for createUser() - hashed password storage, admin flag, storage quota
+  - Tests for findUserByUsername() and findUserById() - user lookup
+  - Tests for validateCredentials() - credential validation, timing attack prevention
+  - Tests for updatePassword(), getAllUsers(), deleteUser(), updateUser()
+- Created comprehensive unit tests for authentication middleware (src/auth/middleware.test.ts):
+  - Tests for requireAuth() - success path, 401 on invalid token, 500 on error
+  - Tests for requireAdmin() - admin access granted/denied, 403 for non-admin, 401 if unauthenticated
+  - Tests for isAuthenticated(), getAuthenticatedUser(), isAdmin() helpers
+- Created comprehensive unit tests for auth routes (src/routes/auth.routes.test.ts):
+  - Tests for POST /login - validation, success, invalid credentials, error handling
+  - Tests for POST /refresh - token validation, user existence check, new token generation
+- Total: 83 tests, all passing
+- Verified: pnpm run build compiles successfully, pnpm test passes (83 tests)
+
 ## Next Task
-Task 15: Write authentication unit tests
+Task 16: Configure Multer for file uploads
