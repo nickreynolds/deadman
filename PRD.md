@@ -644,7 +644,7 @@ Each task includes:
   - Unauthenticated requests return 401
   - Successful upload returns video metadata
   - Response matches API specification
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 18: Add file size and quota validation**
 - **Category:** Validation

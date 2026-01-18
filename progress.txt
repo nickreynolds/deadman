@@ -307,5 +307,28 @@
 - Total: 106 tests, all passing
 - Verified: pnpm run build compiles successfully, pnpm test passes (106 tests)
 
+### Task 17: Implement video upload endpoint (2026-01-18)
+- Created src/services/video.service.ts with video management functions:
+  - createVideo(): Creates video record with auto-generated public token
+  - findVideoById(), findVideoByPublicToken(): Video lookup functions
+  - getVideosByUser(): List videos with pagination and status filtering
+  - updateVideoTitle(), deleteVideo(): Video CRUD operations
+  - checkUserStorageQuota(): Validates file fits within user's remaining quota
+  - updateUserStorageUsage(): Updates user's storage_used_bytes after upload
+  - getUserDefaultTimerDays(): Gets user's timer setting for distribution calculation
+- Created src/routes/video.routes.ts with POST /api/videos/upload endpoint:
+  - Requires authentication via requireAuth middleware
+  - Pre-upload quota check rejects users with no remaining quota (413)
+  - Uses Multer middleware for multipart/form-data handling
+  - Post-upload quota validation ensures file fits in remaining space
+  - Cleans up uploaded file on any error (quota exceeded, server error)
+  - Auto-generates title as "Video YYYY-MM-DD HH:MM" if not provided
+  - Calculates distribute_at based on user's default_timer_days setting
+  - Stores relative file path for portability across systems
+  - Response includes: id, title, file_size_bytes, mime_type, status, distribute_at, public_token
+- Updated src/routes/index.ts to export videoRoutes
+- Updated src/index.ts to mount video routes at /api/videos
+- Verified: pnpm run build compiles successfully, pnpm test passes (106 tests)
+
 ## Next Task
-Task 17: Implement video upload endpoint
+Task 18: Add file size and quota validation

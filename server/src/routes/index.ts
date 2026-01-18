@@ -1,3 +1,4 @@
 // Routes index - exports all route modules
 
 export { default as authRoutes } from './auth.routes';
+export { default as videoRoutes } from './video.routes';
