@@ -279,5 +279,33 @@
 - Total: 83 tests, all passing
 - Verified: pnpm run build compiles successfully, pnpm test passes (83 tests)
 
+### Task 16: Configure Multer for file uploads (2026-01-18)
+- Created src/middleware/upload.ts with comprehensive Multer configuration:
+  - UploadError class for upload-specific error handling with status codes
+  - ALLOWED_VIDEO_MIME_TYPES: video/mp4, video/quicktime (iOS), video/webm, video/3gpp, etc.
+  - ALLOWED_VIDEO_EXTENSIONS: .mp4, .mov, .webm, .3gp, .avi, .mkv, etc.
+  - videoFileFilter(): Validates both MIME type and extension for security
+  - generateUniqueFilename(): Creates UUID-based filenames preserving original extension
+  - createDiskStorage(): Multer disk storage with user-specific directories
+  - createUploadMiddleware(): Creates configured Multer instance with file size limits
+  - getUploadMiddleware(): Singleton accessor for Multer instance
+  - handleUploadError(): Express error middleware for proper HTTP error responses
+    - LIMIT_FILE_SIZE → 413 with max size message
+    - LIMIT_FILE_COUNT → 400 (only single file allowed)
+    - LIMIT_UNEXPECTED_FILE → 400 (must use "video" field name)
+  - cleanupUploadedFile(): Helper to remove files after failed uploads
+  - getTempUploadPath(): Helper for temporary upload directory
+- Created src/middleware/index.ts to export all middleware
+- File size limits enforced via existing MAX_FILE_SIZE_MB config (default 500 MB)
+- Files stored in user-specific subdirectories (userId/uuid.ext)
+- Created comprehensive unit tests (src/middleware/upload.test.ts):
+  - Tests for ALLOWED_VIDEO_MIME_TYPES and ALLOWED_VIDEO_EXTENSIONS
+  - Tests for videoFileFilter() - valid files, invalid MIME, invalid extension, case handling
+  - Tests for generateUniqueFilename() - UUID format, extension preservation, uniqueness
+  - Tests for UploadError - default/custom status codes, inheritance
+  - Tests for handleUploadError() - all Multer error codes, custom errors, passthrough
+- Total: 106 tests, all passing
+- Verified: pnpm run build compiles successfully, pnpm test passes (106 tests)
+
 ## Next Task
-Task 16: Configure Multer for file uploads
+Task 17: Implement video upload endpoint

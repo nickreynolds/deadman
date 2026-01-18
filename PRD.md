@@ -634,7 +634,7 @@ Each task includes:
   - Multer accepts video/* MIME types
   - File size limits are enforced
   - Temporary files are stored in configured location
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 17: Implement video upload endpoint**
 - **Category:** API
