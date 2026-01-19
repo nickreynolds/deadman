@@ -591,5 +591,28 @@
 - Total: 281 tests, all passing (12 new video delete endpoint tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (281 tests)
 
+### Task 29: Add ownership validation (2026-01-19)
+- Task verified as already complete - ownership validation was implemented as part of Tasks 26, 27, and 28
+- GET /api/videos/:id (lines 313-323): Checks video.userId !== user.id, returns 403
+- PATCH /api/videos/:id (lines 402-412): Checks existingVideo.userId !== user.id, returns 403
+- DELETE /api/videos/:id (lines 499-509): Checks video.userId !== user.id, returns 403
+- GET /api/videos (list endpoint): Implicitly secure - uses getVideosByUser(user.id) which filters by user
+- All endpoints log unauthorized access attempts for security auditing
+- Comprehensive tests already exist for each endpoint verifying 403 responses
+- No code changes required - marked as FINISHED
+- Verified: pnpm run build compiles successfully, pnpm test passes (281 tests)
+
+### Task 30: Write video management unit tests (2026-01-19)
+- Task verified as already complete - tests were written as part of Tasks 24-28
+- 85 test cases in src/routes/video.routes.test.ts covering:
+  - POST /upload (28 tests): Authentication, quota validation, file handling, title generation
+  - GET / (22 tests): Authentication, pagination, status filtering, validation
+  - GET /:id (8 tests): Authentication, video retrieval, ownership validation, error handling
+  - PATCH /:id (15 tests): Authentication, validation, ownership, title updates, error handling
+  - DELETE /:id (12 tests): Authentication, ownership, file deletion, storage updates
+- Tests cover all CRUD operations, ownership validation, and edge cases
+- No code changes required - marked as FINISHED
+- Verified: pnpm run build compiles successfully, pnpm test passes (281 tests)
+
 ## Next Task
-Task 29: Add ownership validation
+Task 31: Create CheckIn data model

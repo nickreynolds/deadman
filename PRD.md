@@ -757,7 +757,7 @@ Each task includes:
   - Users cannot access other users' videos
   - 403 returned for unauthorized access attempts
   - Validation applied consistently across all endpoints
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 30: Write video management unit tests**
 - **Category:** Testing
@@ -767,7 +767,7 @@ Each task includes:
   - Tests cover ownership validation
   - Tests cover edge cases (non-existent videos, etc.)
   - All tests pass
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.1.5 Check-In System
 
