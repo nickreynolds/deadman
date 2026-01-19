@@ -9,7 +9,9 @@ import {
   updateUserStorageUsage,
   checkUserStorageQuota,
   getUserDefaultTimerDays,
+  getVideosByUser,
 } from '../services/video.service';
+import type { VideoStatus } from '@prisma/client';
 import { createChildLogger } from '../logger';
 import { getUserStoragePath } from '../storage';
 import { generateAutoTitle, calculateDistributeAt } from '../utils';
@@ -178,6 +180,101 @@ router.post(
     }
   }
 );
+
+/**
+ * GET /api/videos
+ * List user's videos with optional pagination and status filtering
+ *
+ * Query parameters:
+ *   - status: string (optional) - Filter by video status (PENDING, ACTIVE, DISTRIBUTED, EXPIRED)
+ *   - limit: number (optional, default: 50) - Maximum number of videos to return
+ *   - offset: number (optional, default: 0) - Number of videos to skip
+ *
+ * Response:
+ *   - 200: { videos: [...], total: number }
+ *   - 400: { error: string } - Invalid query parameters
+ *   - 401: { error: string } - Not authenticated
+ */
+router.get('/', requireAuth, async (req: Request, res: Response) => {
+  const user = getAuthenticatedUser(req);
+
+  try {
+    // Parse and validate query parameters
+    const statusParam = req.query.status as string | undefined;
+    const limitParam = req.query.limit as string | undefined;
+    const offsetParam = req.query.offset as string | undefined;
+
+    // Validate status parameter if provided
+    let status: VideoStatus | undefined;
+    if (statusParam) {
+      const validStatuses: VideoStatus[] = ['PENDING', 'ACTIVE', 'DISTRIBUTED', 'EXPIRED'];
+      if (!validStatuses.includes(statusParam as VideoStatus)) {
+        logger.warn({ userId: user.id, status: statusParam }, 'Invalid status filter');
+        return res.status(400).json({
+          error: 'Invalid status',
+          message: `Status must be one of: ${validStatuses.join(', ')}`,
+        });
+      }
+      status = statusParam as VideoStatus;
+    }
+
+    // Parse limit with validation
+    let limit = 50; // default
+    if (limitParam !== undefined) {
+      const parsedLimit = parseInt(limitParam, 10);
+      if (isNaN(parsedLimit) || parsedLimit < 1) {
+        return res.status(400).json({
+          error: 'Invalid limit',
+          message: 'Limit must be a positive integer',
+        });
+      }
+      // Cap limit at 100 to prevent excessive data transfer
+      limit = Math.min(parsedLimit, 100);
+    }
+
+    // Parse offset with validation
+    let offset = 0; // default
+    if (offsetParam !== undefined) {
+      const parsedOffset = parseInt(offsetParam, 10);
+      if (isNaN(parsedOffset) || parsedOffset < 0) {
+        return res.status(400).json({
+          error: 'Invalid offset',
+          message: 'Offset must be a non-negative integer',
+        });
+      }
+      offset = parsedOffset;
+    }
+
+    // Fetch videos from database
+    const { videos, total } = await getVideosByUser(user.id, { status, limit, offset });
+
+    logger.debug(
+      { userId: user.id, status, limit, offset, count: videos.length, total },
+      'Videos retrieved successfully'
+    );
+
+    // Format response matching API specification
+    return res.json({
+      videos: videos.map((video) => ({
+        id: video.id,
+        title: video.title,
+        file_size_bytes: video.fileSizeBytes.toString(),
+        mime_type: video.mimeType,
+        status: video.status,
+        distribute_at: video.distributeAt.toISOString(),
+        distributed_at: video.distributedAt?.toISOString() ?? null,
+        expires_at: video.expiresAt?.toISOString() ?? null,
+        public_token: video.publicToken,
+        created_at: video.createdAt.toISOString(),
+        updated_at: video.updatedAt.toISOString(),
+      })),
+      total,
+    });
+  } catch (error) {
+    logger.error({ err: error, userId: user.id }, 'Failed to retrieve videos');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 /**
  * Format bytes to human-readable string

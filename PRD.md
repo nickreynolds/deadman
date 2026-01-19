@@ -720,7 +720,7 @@ Each task includes:
   - Pagination parameters (limit, offset) work correctly
   - Status filter returns only matching videos
   - Response matches API specification
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 26: Implement single video endpoint**
 - **Category:** API

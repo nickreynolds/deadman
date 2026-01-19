@@ -33,12 +33,14 @@ const mockCreateVideo = jest.fn();
 const mockUpdateUserStorageUsage = jest.fn();
 const mockCheckUserStorageQuota = jest.fn();
 const mockGetUserDefaultTimerDays = jest.fn();
+const mockGetVideosByUser = jest.fn();
 
 jest.mock('../services/video.service', () => ({
   createVideo: (...args: unknown[]) => mockCreateVideo(...args),
   updateUserStorageUsage: (...args: unknown[]) => mockUpdateUserStorageUsage(...args),
   checkUserStorageQuota: (...args: unknown[]) => mockCheckUserStorageQuota(...args),
   getUserDefaultTimerDays: (...args: unknown[]) => mockGetUserDefaultTimerDays(...args),
+  getVideosByUser: (...args: unknown[]) => mockGetVideosByUser(...args),
 }));
 
 // Mock upload middleware
@@ -80,10 +82,12 @@ const mockUser = createMockUser({
 function createMockReqRes(options: {
   file?: Express.Multer.File | null;
   body?: Record<string, unknown>;
+  query?: Record<string, string>;
 } = {}) {
   const req = {
     body: options.body || {},
     file: options.file,
+    query: options.query || {},
     user: mockUser,
   } as unknown as Request;
 
@@ -868,6 +872,382 @@ describe('Video Routes', () => {
             }),
           })
         );
+      });
+    });
+  });
+
+  describe('GET /', () => {
+    const handlers = getRouteStack('get', '/');
+    const authMiddleware = handlers[0]!; // requireAuth
+    const listHandler = handlers[1]!; // main handler
+
+    // Create sample video data for tests
+    function createMockVideoData(overrides: Record<string, unknown> = {}) {
+      const now = new Date();
+      const distributeAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return {
+        id: 'video-id-123',
+        title: 'Test Video',
+        filePath: 'test-user-id-123/abc123-uuid.mp4',
+        fileSizeBytes: BigInt(10485760),
+        mimeType: 'video/mp4',
+        status: 'ACTIVE',
+        distributeAt,
+        distributedAt: null,
+        expiresAt: null,
+        publicToken: 'public-token-uuid',
+        createdAt: now,
+        updatedAt: now,
+        ...overrides,
+      };
+    }
+
+    describe('Authentication', () => {
+      it('should require authentication', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes();
+
+        mockRequireAuth.mockImplementation((req, res, next) => {
+          res.status(401).json({ error: 'Unauthorized' });
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(401);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should proceed when authenticated', async () => {
+        const { req, res, nextMock } = createMockReqRes();
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(mockRequireAuth).toHaveBeenCalledWith(req, res, nextMock);
+        expect(nextMock).toHaveBeenCalled();
+      });
+    });
+
+    describe('Basic listing', () => {
+      it('should return empty list when user has no videos', async () => {
+        const { req, res, jsonMock } = createMockReqRes();
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 0 });
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: undefined,
+          limit: 50,
+          offset: 0,
+        });
+        expect(jsonMock).toHaveBeenCalledWith({
+          videos: [],
+          total: 0,
+        });
+      });
+
+      it('should return list of videos with correct format', async () => {
+        const video1 = createMockVideoData({ id: 'video-1', title: 'Video 1' });
+        const video2 = createMockVideoData({ id: 'video-2', title: 'Video 2' });
+        mockGetVideosByUser.mockResolvedValue({ videos: [video1, video2], total: 2 });
+
+        const { req, res, jsonMock } = createMockReqRes();
+
+        await listHandler(req, res);
+
+        expect(jsonMock).toHaveBeenCalledWith({
+          videos: [
+            expect.objectContaining({
+              id: 'video-1',
+              title: 'Video 1',
+              file_size_bytes: '10485760',
+              mime_type: 'video/mp4',
+              status: 'ACTIVE',
+              distribute_at: expect.any(String),
+              distributed_at: null,
+              expires_at: null,
+              public_token: 'public-token-uuid',
+              created_at: expect.any(String),
+              updated_at: expect.any(String),
+            }),
+            expect.objectContaining({
+              id: 'video-2',
+              title: 'Video 2',
+            }),
+          ],
+          total: 2,
+        });
+      });
+
+      it('should include distributed_at and expires_at when present', async () => {
+        const distributedAt = new Date();
+        const expiresAt = new Date(distributedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const video = createMockVideoData({
+          status: 'DISTRIBUTED',
+          distributedAt,
+          expiresAt,
+        });
+        mockGetVideosByUser.mockResolvedValue({ videos: [video], total: 1 });
+
+        const { req, res, jsonMock } = createMockReqRes();
+
+        await listHandler(req, res);
+
+        expect(jsonMock).toHaveBeenCalledWith({
+          videos: [
+            expect.objectContaining({
+              status: 'DISTRIBUTED',
+              distributed_at: distributedAt.toISOString(),
+              expires_at: expiresAt.toISOString(),
+            }),
+          ],
+          total: 1,
+        });
+      });
+    });
+
+    describe('Status filtering', () => {
+      it('should filter by ACTIVE status', async () => {
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 0 });
+
+        const { req, res } = createMockReqRes({ query: { status: 'ACTIVE' } });
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: 'ACTIVE',
+          limit: 50,
+          offset: 0,
+        });
+      });
+
+      it('should filter by DISTRIBUTED status', async () => {
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 0 });
+
+        const { req, res } = createMockReqRes({ query: { status: 'DISTRIBUTED' } });
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: 'DISTRIBUTED',
+          limit: 50,
+          offset: 0,
+        });
+      });
+
+      it('should filter by PENDING status', async () => {
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 0 });
+
+        const { req, res } = createMockReqRes({ query: { status: 'PENDING' } });
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: 'PENDING',
+          limit: 50,
+          offset: 0,
+        });
+      });
+
+      it('should filter by EXPIRED status', async () => {
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 0 });
+
+        const { req, res } = createMockReqRes({ query: { status: 'EXPIRED' } });
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: 'EXPIRED',
+          limit: 50,
+          offset: 0,
+        });
+      });
+
+      it('should return 400 for invalid status', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          query: { status: 'INVALID_STATUS' },
+        });
+
+        await listHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid status',
+          message: 'Status must be one of: PENDING, ACTIVE, DISTRIBUTED, EXPIRED',
+        });
+        expect(mockGetVideosByUser).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Pagination', () => {
+      it('should use default limit of 50', async () => {
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 0 });
+
+        const { req, res } = createMockReqRes();
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: undefined,
+          limit: 50,
+          offset: 0,
+        });
+      });
+
+      it('should accept custom limit', async () => {
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 0 });
+
+        const { req, res } = createMockReqRes({ query: { limit: '10' } });
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: undefined,
+          limit: 10,
+          offset: 0,
+        });
+      });
+
+      it('should cap limit at 100', async () => {
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 0 });
+
+        const { req, res } = createMockReqRes({ query: { limit: '500' } });
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: undefined,
+          limit: 100,
+          offset: 0,
+        });
+      });
+
+      it('should accept custom offset', async () => {
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 0 });
+
+        const { req, res } = createMockReqRes({ query: { offset: '20' } });
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: undefined,
+          limit: 50,
+          offset: 20,
+        });
+      });
+
+      it('should return 400 for invalid limit (not a number)', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          query: { limit: 'abc' },
+        });
+
+        await listHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid limit',
+          message: 'Limit must be a positive integer',
+        });
+        expect(mockGetVideosByUser).not.toHaveBeenCalled();
+      });
+
+      it('should return 400 for invalid limit (zero)', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          query: { limit: '0' },
+        });
+
+        await listHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid limit',
+          message: 'Limit must be a positive integer',
+        });
+      });
+
+      it('should return 400 for invalid limit (negative)', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          query: { limit: '-5' },
+        });
+
+        await listHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid limit',
+          message: 'Limit must be a positive integer',
+        });
+      });
+
+      it('should return 400 for invalid offset (not a number)', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          query: { offset: 'abc' },
+        });
+
+        await listHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid offset',
+          message: 'Offset must be a non-negative integer',
+        });
+        expect(mockGetVideosByUser).not.toHaveBeenCalled();
+      });
+
+      it('should return 400 for invalid offset (negative)', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          query: { offset: '-1' },
+        });
+
+        await listHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid offset',
+          message: 'Offset must be a non-negative integer',
+        });
+      });
+
+      it('should allow offset of zero', async () => {
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 0 });
+
+        const { req, res } = createMockReqRes({ query: { offset: '0' } });
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: undefined,
+          limit: 50,
+          offset: 0,
+        });
+      });
+
+      it('should accept combined pagination parameters', async () => {
+        mockGetVideosByUser.mockResolvedValue({ videos: [], total: 100 });
+
+        const { req, res } = createMockReqRes({
+          query: { limit: '25', offset: '50', status: 'ACTIVE' },
+        });
+
+        await listHandler(req, res);
+
+        expect(mockGetVideosByUser).toHaveBeenCalledWith(mockUser.id, {
+          status: 'ACTIVE',
+          limit: 25,
+          offset: 50,
+        });
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should return 500 on database error', async () => {
+        mockGetVideosByUser.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes();
+
+        await listHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
       });
     });
   });

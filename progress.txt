@@ -483,5 +483,33 @@
 - Total: 224 tests, all passing (28 video upload integration tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (224 tests)
 
+### Task 25: Implement video list endpoint (2026-01-19)
+- Created GET /api/videos endpoint in src/routes/video.routes.ts:
+  - Requires authentication via requireAuth middleware
+  - Query parameters:
+    - status: Filter by VideoStatus (PENDING, ACTIVE, DISTRIBUTED, EXPIRED)
+    - limit: Number of videos to return (default: 50, max: 100)
+    - offset: Number of videos to skip (default: 0)
+  - Returns 400 for invalid query parameters:
+    - Invalid status values with list of valid options
+    - Non-numeric or negative limit/offset values
+  - Response format matches API specification:
+    - videos: Array of video objects with snake_case field names
+    - total: Total count of matching videos (for pagination)
+  - Video objects include all metadata:
+    - id, title, file_size_bytes, mime_type, status
+    - distribute_at, distributed_at (null if not distributed), expires_at (null if not set)
+    - public_token, created_at, updated_at
+  - Uses existing getVideosByUser() service function
+- Created comprehensive unit tests for GET /api/videos:
+  - Authentication tests (requires auth, proceeds when authenticated)
+  - Basic listing tests (empty list, correct format, distributed_at/expires_at inclusion)
+  - Status filtering tests (all 4 statuses, invalid status rejection)
+  - Pagination tests (default limit, custom limit, limit cap at 100, offset, combined params)
+  - Validation tests (invalid limit, invalid offset, zero offset allowed)
+  - Error handling tests (500 on database error)
+- Total: 246 tests, all passing (22 new video list endpoint tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (246 tests)
+
 ## Next Task
-Task 25: Implement video list endpoint
+Task 26: Implement single video endpoint
