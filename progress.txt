@@ -565,5 +565,31 @@
 - Total: 269 tests, all passing (15 new video update endpoint tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (269 tests)
 
+### Task 28: Implement video delete endpoint (2026-01-19)
+- Created DELETE /api/videos/:id endpoint in src/routes/video.routes.ts:
+  - Requires authentication via requireAuth middleware
+  - Fetches video to check ownership before deletion
+  - Returns 404 for non-existent video with clear error message
+  - Returns 403 for videos owned by other users (ownership validation)
+  - Deletes video file from storage using cleanupFile from cleanup service
+  - Handles case where file doesn't exist on disk (still proceeds with DB deletion)
+  - Deletes database record using deleteVideo from video service
+  - Decrements user's storage_used_bytes by the deleted video's file size
+  - Handles race condition where video is deleted between check and delete
+  - Returns { success: true } on successful deletion
+  - Logs deletion operations and unauthorized access attempts
+- Added imports for cleanupFile from cleanup service and getStorageConfig from storage
+- Consolidated duplicate storage imports
+- Created comprehensive unit tests for DELETE /api/videos/:id (12 new tests):
+  - Authentication tests (requires auth, proceeds when authenticated)
+  - Video retrieval tests (404 for non-existent video)
+  - Ownership validation tests (403 for other user's video)
+  - Successful deletion tests (deletes file and DB record, decrements storage, handles missing file, different file paths)
+  - Race condition handling tests (404 when video deleted between check and delete)
+  - Error handling tests (500 on findVideoById error, 500 on deleteVideo error, 500 on updateUserStorageUsage error)
+- Fixed test infrastructure: storage mock needed to be properly reset in beforeEach with mockReturnValue
+- Total: 281 tests, all passing (12 new video delete endpoint tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (281 tests)
+
 ## Next Task
-Task 28: Implement video delete endpoint
+Task 29: Add ownership validation

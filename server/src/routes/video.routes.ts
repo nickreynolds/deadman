@@ -12,10 +12,12 @@ import {
   getVideosByUser,
   findVideoById,
   updateVideoTitle,
+  deleteVideo,
 } from '../services/video.service';
+import { cleanupFile } from '../services/cleanup.service';
+import { getStorageConfig, getUserStoragePath } from '../storage';
 import type { VideoStatus } from '@prisma/client';
 import { createChildLogger } from '../logger';
-import { getUserStoragePath } from '../storage';
 import { generateAutoTitle, calculateDistributeAt } from '../utils';
 import path from 'path';
 
@@ -460,6 +462,93 @@ router.patch('/:id', requireAuth, async (req: Request<{ id: string }>, res: Resp
     });
   } catch (error) {
     logger.error({ err: error, userId: user.id, videoId }, 'Failed to update video');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /api/videos/:id
+ * Delete a video and free up storage
+ *
+ * Path parameters:
+ *   - id: string (required) - The video UUID
+ *
+ * Response:
+ *   - 200: { success: true }
+ *   - 401: { error: string } - Not authenticated
+ *   - 403: { error: string } - Video owned by another user
+ *   - 404: { error: string } - Video not found
+ */
+router.delete('/:id', requireAuth, async (req: Request<{ id: string }>, res: Response) => {
+  const user = getAuthenticatedUser(req);
+  const videoId = req.params.id;
+
+  try {
+    // First fetch the video to check ownership and get file info
+    const video = await findVideoById(videoId);
+
+    // Check if video exists
+    if (!video) {
+      logger.debug({ userId: user.id, videoId }, 'Video not found for deletion');
+      return res.status(404).json({
+        error: 'Video not found',
+        message: 'The requested video does not exist',
+      });
+    }
+
+    // Check ownership - user can only delete their own videos
+    if (video.userId !== user.id) {
+      logger.warn(
+        { userId: user.id, videoId, ownerId: video.userId },
+        'Unauthorized delete attempt on video'
+      );
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to delete this video',
+      });
+    }
+
+    // Get the absolute file path
+    const storageConfig = getStorageConfig();
+    const absoluteFilePath = path.join(storageConfig.rootPath, video.filePath);
+
+    // Delete the video file from storage
+    const fileDeleted = await cleanupFile(absoluteFilePath);
+    if (!fileDeleted) {
+      logger.warn(
+        { userId: user.id, videoId, filePath: video.filePath },
+        'Video file not found on disk during deletion (may have been already cleaned up)'
+      );
+    }
+
+    // Delete the database record
+    const deletedVideo = await deleteVideo(videoId);
+
+    // Handle race condition where video was deleted between check and delete
+    if (!deletedVideo) {
+      logger.warn({ userId: user.id, videoId }, 'Video was deleted by another process');
+      return res.status(404).json({
+        error: 'Video not found',
+        message: 'The requested video does not exist',
+      });
+    }
+
+    // Decrement user's storage usage
+    await updateUserStorageUsage(user.id, -video.fileSizeBytes);
+
+    logger.info(
+      {
+        userId: user.id,
+        videoId,
+        fileSizeBytes: video.fileSizeBytes.toString(),
+        fileDeleted,
+      },
+      'Video deleted successfully'
+    );
+
+    return res.json({ success: true });
+  } catch (error) {
+    logger.error({ err: error, userId: user.id, videoId }, 'Failed to delete video');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

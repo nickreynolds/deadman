@@ -748,7 +748,7 @@ Each task includes:
   - Database record is removed
   - User's storage_used_bytes is decremented
   - Returns success confirmation
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 29: Add ownership validation**
 - **Category:** Security

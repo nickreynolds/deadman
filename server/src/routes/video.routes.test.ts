@@ -19,13 +19,14 @@ jest.mock('../logger', () => ({
 }));
 
 // Mock storage module
+const mockGetStorageConfig = jest.fn();
+const mockEnsureUserStorageDirectory = jest.fn();
+const mockGetUserStoragePath = jest.fn();
+
 jest.mock('../storage', () => ({
-  getStorageConfig: jest.fn(() => ({
-    rootPath: '/tmp/test-storage',
-    maxFileSizeBytes: 500 * 1024 * 1024, // 500 MB
-  })),
-  ensureUserStorageDirectory: jest.fn(),
-  getUserStoragePath: jest.fn((userId: string) => `/tmp/test-storage/${userId}`),
+  getStorageConfig: () => mockGetStorageConfig(),
+  ensureUserStorageDirectory: (...args: unknown[]) => mockEnsureUserStorageDirectory(...args),
+  getUserStoragePath: (...args: unknown[]) => mockGetUserStoragePath(...args),
 }));
 
 // Mock video service functions
@@ -36,6 +37,7 @@ const mockGetUserDefaultTimerDays = jest.fn();
 const mockGetVideosByUser = jest.fn();
 const mockFindVideoById = jest.fn();
 const mockUpdateVideoTitle = jest.fn();
+const mockDeleteVideo = jest.fn();
 
 jest.mock('../services/video.service', () => ({
   createVideo: (...args: unknown[]) => mockCreateVideo(...args),
@@ -45,6 +47,14 @@ jest.mock('../services/video.service', () => ({
   getVideosByUser: (...args: unknown[]) => mockGetVideosByUser(...args),
   findVideoById: (...args: unknown[]) => mockFindVideoById(...args),
   updateVideoTitle: (...args: unknown[]) => mockUpdateVideoTitle(...args),
+  deleteVideo: (...args: unknown[]) => mockDeleteVideo(...args),
+}));
+
+// Mock cleanup service
+const mockCleanupFile = jest.fn();
+
+jest.mock('../services/cleanup.service', () => ({
+  cleanupFile: (...args: unknown[]) => mockCleanupFile(...args),
 }));
 
 // Mock upload middleware
@@ -173,6 +183,38 @@ describe('Video Routes', () => {
 
     // Default cleanup - resolves
     mockCleanupUploadedFile.mockResolvedValue(undefined);
+
+    // Default cleanup file - resolves (file existed)
+    mockCleanupFile.mockResolvedValue(true);
+
+    // Default delete video - resolves successfully
+    mockDeleteVideo.mockResolvedValue({
+      id: 'video-id-123',
+      userId: mockUser.id,
+      title: 'Test Video',
+      filePath: 'test-user-id-123/abc123-uuid.mp4',
+      fileSizeBytes: BigInt(10485760),
+      mimeType: 'video/mp4',
+      status: 'ACTIVE',
+      distributeAt: new Date(),
+      distributedAt: null,
+      expiresAt: null,
+      publicToken: 'public-token-uuid',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    // Default update storage usage - resolves
+    mockUpdateUserStorageUsage.mockResolvedValue(undefined);
+
+    // Default storage config
+    mockGetStorageConfig.mockReturnValue({
+      rootPath: '/tmp/test-storage',
+      maxFileSizeBytes: 500 * 1024 * 1024, // 500 MB
+    });
+
+    // Default user storage path
+    mockGetUserStoragePath.mockImplementation((userId: string) => `/tmp/test-storage/${userId}`);
   });
 
   describe('POST /upload', () => {
@@ -1782,6 +1824,252 @@ describe('Video Routes', () => {
           error: 'Video not found',
           message: 'The requested video does not exist',
         });
+      });
+    });
+  });
+
+  describe('DELETE /:id', () => {
+    const handlers = getRouteStack('delete', '/:id');
+    const authMiddleware = handlers[0]!; // requireAuth
+    const deleteVideoHandler = handlers[1]!; // main handler
+
+    // Create sample video data for tests
+    function createMockVideoData(overrides: Record<string, unknown> = {}) {
+      const now = new Date();
+      const distributeAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return {
+        id: 'video-id-123',
+        userId: mockUser.id,
+        title: 'Test Video',
+        filePath: 'test-user-id-123/abc123-uuid.mp4',
+        fileSizeBytes: BigInt(10485760),
+        mimeType: 'video/mp4',
+        status: 'ACTIVE',
+        distributeAt,
+        distributedAt: null,
+        expiresAt: null,
+        publicToken: 'public-token-uuid',
+        createdAt: now,
+        updatedAt: now,
+        ...overrides,
+      };
+    }
+
+    describe('Authentication', () => {
+      it('should require authentication', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        mockRequireAuth.mockImplementation((req, res, next) => {
+          res.status(401).json({ error: 'Unauthorized' });
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(401);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should proceed when authenticated', async () => {
+        const { req, res, nextMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(mockRequireAuth).toHaveBeenCalledWith(req, res, nextMock);
+        expect(nextMock).toHaveBeenCalled();
+      });
+    });
+
+    describe('Video retrieval', () => {
+      it('should return 404 for non-existent video', async () => {
+        mockFindVideoById.mockResolvedValue(null);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'non-existent-id' },
+        });
+
+        await deleteVideoHandler(req, res);
+
+        expect(mockFindVideoById).toHaveBeenCalledWith('non-existent-id');
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Video not found',
+          message: 'The requested video does not exist',
+        });
+      });
+    });
+
+    describe('Ownership validation', () => {
+      it('should return 403 for video owned by another user', async () => {
+        const video = createMockVideoData({
+          userId: 'other-user-id', // Different user
+        });
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await deleteVideoHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(403);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Forbidden',
+          message: 'You do not have permission to delete this video',
+        });
+        // Should not attempt to delete
+        expect(mockCleanupFile).not.toHaveBeenCalled();
+        expect(mockDeleteVideo).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Successful deletion', () => {
+      it('should delete video file and database record', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await deleteVideoHandler(req, res);
+
+        // Should delete file
+        expect(mockCleanupFile).toHaveBeenCalledWith(
+          '/tmp/test-storage/test-user-id-123/abc123-uuid.mp4'
+        );
+        // Should delete database record
+        expect(mockDeleteVideo).toHaveBeenCalledWith('video-id-123');
+        // Should not call status (200 is default)
+        expect(statusMock).not.toHaveBeenCalled();
+        // Should return success
+        expect(jsonMock).toHaveBeenCalledWith({ success: true });
+      });
+
+      it('should decrement user storage usage', async () => {
+        const video = createMockVideoData({
+          fileSizeBytes: BigInt(10485760), // 10 MB
+        });
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await deleteVideoHandler(req, res);
+
+        expect(mockUpdateUserStorageUsage).toHaveBeenCalledWith(
+          mockUser.id,
+          BigInt(-10485760) // Negative value to decrement
+        );
+      });
+
+      it('should succeed even if file does not exist on disk', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+        mockCleanupFile.mockResolvedValue(false); // File not found
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await deleteVideoHandler(req, res);
+
+        // Should still delete database record
+        expect(mockDeleteVideo).toHaveBeenCalledWith('video-id-123');
+        // Should still update storage
+        expect(mockUpdateUserStorageUsage).toHaveBeenCalled();
+        // Should return success
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({ success: true });
+      });
+
+      it('should handle videos with different file paths', async () => {
+        const video = createMockVideoData({
+          filePath: 'test-user-id-123/different-video.mov',
+        });
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await deleteVideoHandler(req, res);
+
+        expect(mockCleanupFile).toHaveBeenCalledWith(
+          '/tmp/test-storage/test-user-id-123/different-video.mov'
+        );
+      });
+    });
+
+    describe('Race condition handling', () => {
+      it('should return 404 when video deleted between check and delete', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+        mockDeleteVideo.mockResolvedValue(null); // Video was deleted by another process
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await deleteVideoHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Video not found',
+          message: 'The requested video does not exist',
+        });
+        // Should not update storage since delete failed
+        expect(mockUpdateUserStorageUsage).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should return 500 on findVideoById error', async () => {
+        mockFindVideoById.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await deleteVideoHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+
+      it('should return 500 on deleteVideo error', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+        mockDeleteVideo.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await deleteVideoHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+
+      it('should return 500 on updateUserStorageUsage error', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+        mockUpdateUserStorageUsage.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await deleteVideoHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
       });
     });
   });
