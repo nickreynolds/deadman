@@ -131,7 +131,7 @@ function getRouteStack(method: string, path: string): Function[] {
 
 describe('Video Routes', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
 
     // Default auth mock behavior - passes authentication
     mockRequireAuth.mockImplementation((req, res, next) => {
@@ -163,10 +163,10 @@ describe('Video Routes', () => {
 
   describe('POST /upload', () => {
     const handlers = getRouteStack('post', '/upload');
-    const authMiddleware = handlers[0]; // requireAuth
-    const quotaCheckMiddleware = handlers[1]; // pre-upload quota check
-    const uploadMiddleware = handlers[2]; // multer wrapper
-    const processHandler = handlers[3]; // main handler
+    const authMiddleware = handlers[0]!; // requireAuth
+    const quotaCheckMiddleware = handlers[1]!; // pre-upload quota check
+    const uploadMiddleware = handlers[2]!; // multer wrapper
+    const processHandler = handlers[3]!; // main handler
 
     describe('Authentication', () => {
       it('should require authentication', async () => {
@@ -285,20 +285,13 @@ describe('Video Routes', () => {
         const mockFile = createMockFile({ size: 10485760 }); // 10 MB
         const { req, res, statusMock, jsonMock } = createMockReqRes({ file: mockFile });
 
-        // First call (pre-upload) has quota, second call (post-upload) doesn't
-        mockCheckUserStorageQuota
-          .mockResolvedValueOnce({
-            hasQuota: true,
-            quotaBytes: BigInt(1073741824),
-            usedBytes: BigInt(0),
-            remainingBytes: BigInt(1073741824),
-          })
-          .mockResolvedValueOnce({
-            hasQuota: false,
-            quotaBytes: BigInt(1073741824),
-            usedBytes: BigInt(1073741824),
-            remainingBytes: BigInt(0),
-          });
+        // Post-upload quota check fails (file exceeds remaining quota)
+        mockCheckUserStorageQuota.mockResolvedValue({
+          hasQuota: false,
+          quotaBytes: BigInt(1073741824),
+          usedBytes: BigInt(1073741824),
+          remainingBytes: BigInt(0),
+        });
 
         await processHandler(req, res);
 

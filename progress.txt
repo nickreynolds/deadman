@@ -457,5 +457,31 @@
 - Total: 196 tests, all passing (16 new cleanup service tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (196 tests)
 
+### Task 24: Write upload integration tests (2026-01-19)
+- Video upload integration tests already existed in src/routes/video.routes.test.ts
+- Fixed TypeScript errors by adding non-null assertions to handler extraction
+- Fixed test isolation issue by changing jest.clearAllMocks() to jest.resetAllMocks()
+  - clearAllMocks only clears call history, not mock implementations
+  - mockResolvedValueOnce queues persist between tests unless reset
+  - This was causing "Different file types" tests to fail due to leftover rejected mocks
+- Fixed quota check test logic (single mock response instead of double)
+- Test coverage includes:
+  - Authentication requirements (requireAuth middleware)
+  - Pre-upload quota validation (reject users with no quota left)
+  - File upload handling (Multer middleware integration)
+  - Video processing:
+    - No file uploaded returns 400
+    - Post-upload quota validation
+    - User-provided titles preserved
+    - Auto-generated titles (with/without location)
+    - Storage usage tracking
+    - Timer days calculation
+    - Complete response metadata validation
+  - Quota exceeded scenarios (detailed error messages with quota info)
+  - Error handling (database errors, cleanup on failure)
+  - Different file types (MOV from iOS, WebM)
+- Total: 224 tests, all passing (28 video upload integration tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (224 tests)
+
 ## Next Task
-Task 24: Write upload integration tests
+Task 25: Implement video list endpoint
