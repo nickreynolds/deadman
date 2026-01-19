@@ -738,7 +738,7 @@ Each task includes:
   - Title is updated successfully
   - updated_at timestamp is modified
   - Returns updated video metadata
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 28: Implement video delete endpoint**
 - **Category:** API

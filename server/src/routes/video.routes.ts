@@ -11,6 +11,7 @@ import {
   getUserDefaultTimerDays,
   getVideosByUser,
   findVideoById,
+  updateVideoTitle,
 } from '../services/video.service';
 import type { VideoStatus } from '@prisma/client';
 import { createChildLogger } from '../logger';
@@ -339,6 +340,126 @@ router.get('/:id', requireAuth, async (req: Request<{ id: string }>, res: Respon
     });
   } catch (error) {
     logger.error({ err: error, userId: user.id, videoId }, 'Failed to retrieve video');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * PATCH /api/videos/:id
+ * Update video metadata (currently only title)
+ *
+ * Path parameters:
+ *   - id: string (required) - The video UUID
+ *
+ * Request body:
+ *   - title: string (optional) - New title for the video
+ *
+ * Response:
+ *   - 200: { video: {...} }
+ *   - 400: { error: string } - Invalid request body
+ *   - 401: { error: string } - Not authenticated
+ *   - 403: { error: string } - Video owned by another user
+ *   - 404: { error: string } - Video not found
+ */
+router.patch('/:id', requireAuth, async (req: Request<{ id: string }>, res: Response) => {
+  const user = getAuthenticatedUser(req);
+  const videoId = req.params.id;
+
+  try {
+    // Validate request body
+    const { title } = req.body as { title?: string };
+
+    // Check if title is provided and is a string
+    if (title !== undefined && typeof title !== 'string') {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'Title must be a string',
+      });
+    }
+
+    // Check if title is empty string when provided
+    if (title !== undefined && title.trim() === '') {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'Title cannot be empty',
+      });
+    }
+
+    // First fetch the video to check ownership
+    const existingVideo = await findVideoById(videoId);
+
+    // Check if video exists
+    if (!existingVideo) {
+      logger.debug({ userId: user.id, videoId }, 'Video not found for update');
+      return res.status(404).json({
+        error: 'Video not found',
+        message: 'The requested video does not exist',
+      });
+    }
+
+    // Check ownership - user can only update their own videos
+    if (existingVideo.userId !== user.id) {
+      logger.warn(
+        { userId: user.id, videoId, ownerId: existingVideo.userId },
+        'Unauthorized update attempt to video'
+      );
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to modify this video',
+      });
+    }
+
+    // If no title provided, return the video unchanged
+    if (title === undefined) {
+      logger.debug({ userId: user.id, videoId }, 'No fields to update');
+      return res.json({
+        video: {
+          id: existingVideo.id,
+          title: existingVideo.title,
+          file_size_bytes: existingVideo.fileSizeBytes.toString(),
+          mime_type: existingVideo.mimeType,
+          status: existingVideo.status,
+          distribute_at: existingVideo.distributeAt.toISOString(),
+          distributed_at: existingVideo.distributedAt?.toISOString() ?? null,
+          expires_at: existingVideo.expiresAt?.toISOString() ?? null,
+          public_token: existingVideo.publicToken,
+          created_at: existingVideo.createdAt.toISOString(),
+          updated_at: existingVideo.updatedAt.toISOString(),
+        },
+      });
+    }
+
+    // Update the video title
+    const video = await updateVideoTitle(videoId, title.trim());
+
+    // This should not happen since we already checked existence, but handle it anyway
+    if (!video) {
+      return res.status(404).json({
+        error: 'Video not found',
+        message: 'The requested video does not exist',
+      });
+    }
+
+    logger.info({ userId: user.id, videoId, newTitle: title.trim() }, 'Video title updated');
+
+    // Return response matching API specification
+    return res.json({
+      video: {
+        id: video.id,
+        title: video.title,
+        file_size_bytes: video.fileSizeBytes.toString(),
+        mime_type: video.mimeType,
+        status: video.status,
+        distribute_at: video.distributeAt.toISOString(),
+        distributed_at: video.distributedAt?.toISOString() ?? null,
+        expires_at: video.expiresAt?.toISOString() ?? null,
+        public_token: video.publicToken,
+        created_at: video.createdAt.toISOString(),
+        updated_at: video.updatedAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error({ err: error, userId: user.id, videoId }, 'Failed to update video');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

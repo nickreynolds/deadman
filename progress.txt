@@ -533,5 +533,37 @@
 - Total: 254 tests, all passing (8 new single video endpoint tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (254 tests)
 
+### Task 27: Implement video update endpoint (2026-01-19)
+- Created PATCH /api/videos/:id endpoint in src/routes/video.routes.ts:
+  - Requires authentication via requireAuth middleware
+  - Validates request body:
+    - Returns 400 if title is not a string
+    - Returns 400 if title is empty or only whitespace
+  - Fetches video to check ownership before updating
+  - Returns 404 for non-existent video with clear error message
+  - Returns 403 for videos owned by other users (ownership validation)
+  - Trims whitespace from title before saving
+  - If no title provided in body, returns video unchanged (no update performed)
+  - Uses updateVideoTitle() service function for database update
+  - Handles race condition where video is deleted between existence check and update
+  - Returns complete video metadata matching API specification:
+    - id, title, file_size_bytes, mime_type, status
+    - distribute_at, distributed_at (null if not distributed), expires_at (null if not set)
+    - public_token, created_at, updated_at
+  - Logs update operations and unauthorized access attempts
+- Added updateVideoTitle import to video routes
+- Fixed getRouteStack test helper to correctly find routes when multiple routes share same path pattern
+  - Now checks if route has handlers for the requested HTTP method
+  - Required for testing both GET /:id and PATCH /:id endpoints
+- Created comprehensive unit tests for PATCH /api/videos/:id (15 new tests):
+  - Authentication tests (requires auth, proceeds when authenticated)
+  - Request validation tests (invalid title type, empty string, whitespace only)
+  - Video retrieval tests (404 for non-existent)
+  - Ownership validation tests (403 for other user's video)
+  - Title update tests (successful update, whitespace trimming, no title returns unchanged, complete metadata, distributed timestamps)
+  - Error handling tests (500 on findVideoById error, 500 on updateVideoTitle error, race condition handling)
+- Total: 269 tests, all passing (15 new video update endpoint tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (269 tests)
+
 ## Next Task
-Task 27: Implement video update endpoint
+Task 28: Implement video delete endpoint
