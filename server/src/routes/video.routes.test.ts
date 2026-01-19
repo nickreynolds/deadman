@@ -57,6 +57,17 @@ jest.mock('../services/cleanup.service', () => ({
   cleanupFile: (...args: unknown[]) => mockCleanupFile(...args),
 }));
 
+// Mock checkin service functions
+const mockPerformCheckIn = jest.fn();
+const mockCanPerformCheckIn = jest.fn();
+const mockIsValidCheckInAction = jest.fn();
+
+jest.mock('../services/checkin.service', () => ({
+  performCheckIn: (...args: unknown[]) => mockPerformCheckIn(...args),
+  canPerformCheckIn: (...args: unknown[]) => mockCanPerformCheckIn(...args),
+  isValidCheckInAction: (...args: unknown[]) => mockIsValidCheckInAction(...args),
+}));
+
 // Mock upload middleware
 const mockCleanupUploadedFile = jest.fn();
 const mockGetUploadMiddleware = jest.fn();
@@ -215,6 +226,12 @@ describe('Video Routes', () => {
 
     // Default user storage path
     mockGetUserStoragePath.mockImplementation((userId: string) => `/tmp/test-storage/${userId}`);
+
+    // Default check-in service behavior
+    mockCanPerformCheckIn.mockReturnValue(true);
+    mockIsValidCheckInAction.mockImplementation(
+      (action: string) => action === 'PREVENT_DISTRIBUTION' || action === 'ALLOW_DISTRIBUTION'
+    );
   });
 
   describe('POST /upload', () => {
@@ -2067,6 +2084,432 @@ describe('Video Routes', () => {
         });
 
         await deleteVideoHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+    });
+  });
+
+  describe('POST /:id/checkin', () => {
+    const handlers = getRouteStack('post', '/:id/checkin');
+    const authMiddleware = handlers[0]!; // requireAuth
+    const checkInHandler = handlers[1]!; // main handler
+
+    // Create sample video data for tests
+    function createMockVideoData(overrides: Record<string, unknown> = {}) {
+      const now = new Date();
+      const distributeAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return {
+        id: 'video-id-123',
+        userId: mockUser.id,
+        title: 'Test Video',
+        filePath: 'test-user-id-123/abc123-uuid.mp4',
+        fileSizeBytes: BigInt(10485760),
+        mimeType: 'video/mp4',
+        status: 'ACTIVE',
+        distributeAt,
+        distributedAt: null,
+        expiresAt: null,
+        publicToken: 'public-token-uuid',
+        createdAt: now,
+        updatedAt: now,
+        ...overrides,
+      };
+    }
+
+    // Create sample check-in data
+    function createMockCheckInData(overrides: Record<string, unknown> = {}) {
+      const now = new Date();
+      return {
+        id: 'checkin-id-123',
+        videoId: 'video-id-123',
+        action: 'PREVENT_DISTRIBUTION',
+        createdAt: now,
+        ...overrides,
+      };
+    }
+
+    describe('Authentication', () => {
+      it('should require authentication', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        mockRequireAuth.mockImplementation((req, res, next) => {
+          res.status(401).json({ error: 'Unauthorized' });
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(401);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should proceed when authenticated', async () => {
+        const { req, res, nextMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(mockRequireAuth).toHaveBeenCalledWith(req, res, nextMock);
+        expect(nextMock).toHaveBeenCalled();
+      });
+    });
+
+    describe('Request validation', () => {
+      it('should return 400 when action is missing', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: {},
+        });
+
+        await checkInHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid request',
+          message: 'Action is required',
+        });
+      });
+
+      it('should return 400 when action is not a string', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 123 },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid request',
+          message: 'Action must be a string',
+        });
+      });
+
+      it('should return 400 for invalid action value', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+        mockIsValidCheckInAction.mockReturnValue(false);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'INVALID_ACTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid action',
+          message: 'Action must be either PREVENT_DISTRIBUTION or ALLOW_DISTRIBUTION',
+        });
+      });
+    });
+
+    describe('Video retrieval', () => {
+      it('should return 404 for non-existent video', async () => {
+        mockFindVideoById.mockResolvedValue(null);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'non-existent-id' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(mockFindVideoById).toHaveBeenCalledWith('non-existent-id');
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Video not found',
+          message: 'The requested video does not exist',
+        });
+      });
+    });
+
+    describe('Ownership validation', () => {
+      it('should return 403 for video owned by another user', async () => {
+        const video = createMockVideoData({
+          userId: 'other-user-id', // Different user
+        });
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(403);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Forbidden',
+          message: 'You do not have permission to check in this video',
+        });
+        expect(mockPerformCheckIn).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Video status validation', () => {
+      it('should return 409 for non-ACTIVE video (DISTRIBUTED)', async () => {
+        const video = createMockVideoData({
+          status: 'DISTRIBUTED',
+        });
+        mockFindVideoById.mockResolvedValue(video);
+        mockCanPerformCheckIn.mockReturnValue(false);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(409);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid video status',
+          message: 'Check-in is only allowed for ACTIVE videos. This video has status: DISTRIBUTED',
+        });
+        expect(mockPerformCheckIn).not.toHaveBeenCalled();
+      });
+
+      it('should return 409 for non-ACTIVE video (PENDING)', async () => {
+        const video = createMockVideoData({
+          status: 'PENDING',
+        });
+        mockFindVideoById.mockResolvedValue(video);
+        mockCanPerformCheckIn.mockReturnValue(false);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(409);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid video status',
+          message: 'Check-in is only allowed for ACTIVE videos. This video has status: PENDING',
+        });
+      });
+
+      it('should return 409 for non-ACTIVE video (EXPIRED)', async () => {
+        const video = createMockVideoData({
+          status: 'EXPIRED',
+        });
+        mockFindVideoById.mockResolvedValue(video);
+        mockCanPerformCheckIn.mockReturnValue(false);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(409);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Invalid video status',
+          message: 'Check-in is only allowed for ACTIVE videos. This video has status: EXPIRED',
+        });
+      });
+    });
+
+    describe('Successful check-in', () => {
+      it('should perform PREVENT_DISTRIBUTION check-in successfully', async () => {
+        const now = new Date();
+        const newDistributeAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const video = createMockVideoData();
+        const updatedVideo = { ...video, distributeAt: newDistributeAt };
+        const checkIn = createMockCheckInData({ action: 'PREVENT_DISTRIBUTION' });
+
+        mockFindVideoById.mockResolvedValue(video);
+        mockPerformCheckIn.mockResolvedValue({ video: updatedVideo, checkIn });
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(mockPerformCheckIn).toHaveBeenCalledWith('video-id-123', 'PREVENT_DISTRIBUTION', 7);
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({
+          video: expect.objectContaining({
+            id: 'video-id-123',
+            title: 'Test Video',
+            status: 'ACTIVE',
+            distribute_at: newDistributeAt.toISOString(),
+          }),
+          checkin: expect.objectContaining({
+            id: 'checkin-id-123',
+            video_id: 'video-id-123',
+            action: 'PREVENT_DISTRIBUTION',
+          }),
+        });
+      });
+
+      it('should perform ALLOW_DISTRIBUTION check-in successfully', async () => {
+        const video = createMockVideoData();
+        const checkIn = createMockCheckInData({ action: 'ALLOW_DISTRIBUTION' });
+
+        mockFindVideoById.mockResolvedValue(video);
+        mockPerformCheckIn.mockResolvedValue({ video, checkIn });
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'ALLOW_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(mockPerformCheckIn).toHaveBeenCalledWith('video-id-123', 'ALLOW_DISTRIBUTION', 7);
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({
+          video: expect.objectContaining({
+            id: 'video-id-123',
+          }),
+          checkin: expect.objectContaining({
+            action: 'ALLOW_DISTRIBUTION',
+          }),
+        });
+      });
+
+      it('should use user timer days for check-in', async () => {
+        const video = createMockVideoData();
+        const checkIn = createMockCheckInData();
+
+        mockFindVideoById.mockResolvedValue(video);
+        mockPerformCheckIn.mockResolvedValue({ video, checkIn });
+        mockGetUserDefaultTimerDays.mockResolvedValue(14); // User has 14-day timer
+
+        const { req, res } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(mockPerformCheckIn).toHaveBeenCalledWith('video-id-123', 'PREVENT_DISTRIBUTION', 14);
+      });
+
+      it('should use default timer days when user setting is null', async () => {
+        const video = createMockVideoData();
+        const checkIn = createMockCheckInData();
+
+        mockFindVideoById.mockResolvedValue(video);
+        mockPerformCheckIn.mockResolvedValue({ video, checkIn });
+        mockGetUserDefaultTimerDays.mockResolvedValue(null);
+
+        const { req, res } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(mockPerformCheckIn).toHaveBeenCalledWith('video-id-123', 'PREVENT_DISTRIBUTION', 7);
+      });
+
+      it('should return complete video and check-in metadata in response', async () => {
+        const now = new Date();
+        const distributeAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const video = createMockVideoData({
+          distributeAt,
+          createdAt: now,
+          updatedAt: now,
+        });
+        const checkIn = createMockCheckInData({ createdAt: now });
+
+        mockFindVideoById.mockResolvedValue(video);
+        mockPerformCheckIn.mockResolvedValue({ video, checkIn });
+
+        const { req, res, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(jsonMock).toHaveBeenCalledWith({
+          video: {
+            id: 'video-id-123',
+            title: 'Test Video',
+            file_size_bytes: '10485760',
+            mime_type: 'video/mp4',
+            status: 'ACTIVE',
+            distribute_at: distributeAt.toISOString(),
+            distributed_at: null,
+            expires_at: null,
+            public_token: 'public-token-uuid',
+            created_at: now.toISOString(),
+            updated_at: now.toISOString(),
+          },
+          checkin: {
+            id: 'checkin-id-123',
+            video_id: 'video-id-123',
+            action: 'PREVENT_DISTRIBUTION',
+            created_at: now.toISOString(),
+          },
+        });
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should return 500 on findVideoById error', async () => {
+        mockFindVideoById.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+
+      it('should return 500 on performCheckIn error', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+        mockPerformCheckIn.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+
+      it('should return 500 on getUserDefaultTimerDays error', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+        mockGetUserDefaultTimerDays.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+          body: { action: 'PREVENT_DISTRIBUTION' },
+        });
+
+        await checkInHandler(req, res);
 
         expect(statusMock).toHaveBeenCalledWith(500);
         expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });

@@ -14,6 +14,11 @@ import {
   updateVideoTitle,
   deleteVideo,
 } from '../services/video.service';
+import {
+  performCheckIn,
+  canPerformCheckIn,
+  isValidCheckInAction,
+} from '../services/checkin.service';
 import { cleanupFile } from '../services/cleanup.service';
 import { getStorageConfig, getUserStoragePath } from '../storage';
 import type { VideoStatus } from '@prisma/client';
@@ -549,6 +554,131 @@ router.delete('/:id', requireAuth, async (req: Request<{ id: string }>, res: Res
     return res.json({ success: true });
   } catch (error) {
     logger.error({ err: error, userId: user.id, videoId }, 'Failed to delete video');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/videos/:id/checkin
+ * Perform a check-in action on a video
+ *
+ * Path parameters:
+ *   - id: string (required) - The video UUID
+ *
+ * Request body:
+ *   - action: "PREVENT_DISTRIBUTION" | "ALLOW_DISTRIBUTION" (required)
+ *
+ * Response:
+ *   - 200: { video: {...}, checkin: {...} }
+ *   - 400: { error: string } - Invalid request body or invalid action
+ *   - 401: { error: string } - Not authenticated
+ *   - 403: { error: string } - Video owned by another user
+ *   - 404: { error: string } - Video not found
+ *   - 409: { error: string } - Video is not in a state that allows check-in
+ */
+router.post('/:id/checkin', requireAuth, async (req: Request<{ id: string }>, res: Response) => {
+  const user = getAuthenticatedUser(req);
+  const videoId = req.params.id;
+
+  try {
+    // Validate request body
+    const { action } = req.body as { action?: string };
+
+    // Check if action is provided
+    if (!action) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'Action is required',
+      });
+    }
+
+    // Check if action is a string
+    if (typeof action !== 'string') {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'Action must be a string',
+      });
+    }
+
+    // Validate action value
+    if (!isValidCheckInAction(action)) {
+      return res.status(400).json({
+        error: 'Invalid action',
+        message: 'Action must be either PREVENT_DISTRIBUTION or ALLOW_DISTRIBUTION',
+      });
+    }
+
+    // Fetch video to check ownership and status
+    const video = await findVideoById(videoId);
+
+    // Check if video exists
+    if (!video) {
+      logger.debug({ userId: user.id, videoId }, 'Video not found for check-in');
+      return res.status(404).json({
+        error: 'Video not found',
+        message: 'The requested video does not exist',
+      });
+    }
+
+    // Check ownership - user can only check in their own videos
+    if (video.userId !== user.id) {
+      logger.warn(
+        { userId: user.id, videoId, ownerId: video.userId },
+        'Unauthorized check-in attempt on video'
+      );
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to check in this video',
+      });
+    }
+
+    // Check if video is in a state that allows check-in
+    if (!canPerformCheckIn(video.status)) {
+      logger.warn(
+        { userId: user.id, videoId, status: video.status },
+        'Check-in attempted on video with invalid status'
+      );
+      return res.status(409).json({
+        error: 'Invalid video status',
+        message: `Check-in is only allowed for ACTIVE videos. This video has status: ${video.status}`,
+      });
+    }
+
+    // Get user's timer days for potential distribution extension
+    const timerDays = (await getUserDefaultTimerDays(user.id)) ?? 7;
+
+    // Perform the check-in
+    const result = await performCheckIn(videoId, action, timerDays);
+
+    logger.info(
+      { userId: user.id, videoId, action, checkInId: result.checkIn.id },
+      'Check-in completed successfully'
+    );
+
+    // Return response matching API specification
+    return res.json({
+      video: {
+        id: result.video.id,
+        title: result.video.title,
+        file_size_bytes: result.video.fileSizeBytes.toString(),
+        mime_type: result.video.mimeType,
+        status: result.video.status,
+        distribute_at: result.video.distributeAt.toISOString(),
+        distributed_at: result.video.distributedAt?.toISOString() ?? null,
+        expires_at: result.video.expiresAt?.toISOString() ?? null,
+        public_token: result.video.publicToken,
+        created_at: result.video.createdAt.toISOString(),
+        updated_at: result.video.updatedAt.toISOString(),
+      },
+      checkin: {
+        id: result.checkIn.id,
+        video_id: result.checkIn.videoId,
+        action: result.checkIn.action,
+        created_at: result.checkIn.createdAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error({ err: error, userId: user.id, videoId }, 'Failed to perform check-in');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

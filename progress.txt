@@ -614,5 +614,46 @@
 - No code changes required - marked as FINISHED
 - Verified: pnpm run build compiles successfully, pnpm test passes (281 tests)
 
+### Task 31: Create CheckIn data model (2026-01-19)
+- Task verified as already complete - CheckIn model was created as part of Task 4 (initial schema migration)
+- CheckIn model includes all required fields: id, video_id, action, created_at
+- CheckInAction enum: PREVENT_DISTRIBUTION, ALLOW_DISTRIBUTION
+- Foreign key to videos table with cascade delete
+- Index on video_id for efficient queries
+- No code changes required - marked as FINISHED
+
+### Tasks 32-36: Implement Check-In System (2026-01-19)
+- Created src/services/checkin.service.ts with comprehensive check-in functionality:
+  - createCheckIn(): Creates a check-in record in the database
+  - getCheckInsByVideoId(): Gets all check-ins for a video (audit trail)
+  - performCheckIn(): Main function that creates check-in and updates video in a transaction
+    - PREVENT_DISTRIBUTION: Extends distribute_at based on user's timer_days setting
+    - ALLOW_DISTRIBUTION: Records the action (video remains ACTIVE status)
+  - canPerformCheckIn(): Validates video status (only ACTIVE videos can have check-ins)
+  - isValidCheckInAction(): Validates action type (PREVENT_DISTRIBUTION or ALLOW_DISTRIBUTION)
+- Created POST /api/videos/:id/checkin endpoint in src/routes/video.routes.ts:
+  - Requires authentication via requireAuth middleware
+  - Validates action in request body (required, must be string, must be valid action)
+  - Returns 404 for non-existent video
+  - Returns 403 for videos owned by other users (ownership validation)
+  - Returns 409 for non-ACTIVE videos (only ACTIVE videos can have check-ins)
+  - Gets user's timer_days setting for distribution extension
+  - Performs check-in using checkin.service.performCheckIn()
+  - Returns { video: {...}, checkin: {...} } matching API specification
+- Created comprehensive unit tests (src/services/checkin.service.test.ts):
+  - Tests for createCheckIn(), getCheckInsByVideoId(), performCheckIn()
+  - Tests for canPerformCheckIn() (all video statuses)
+  - Tests for isValidCheckInAction() (valid and invalid actions)
+- Created comprehensive integration tests in src/routes/video.routes.test.ts:
+  - Authentication tests (requires auth, proceeds when authenticated)
+  - Request validation tests (missing action, non-string action, invalid action)
+  - Video retrieval tests (404 for non-existent video)
+  - Ownership validation tests (403 for other user's video)
+  - Video status validation tests (409 for DISTRIBUTED, PENDING, EXPIRED)
+  - Successful check-in tests (both action types, timer days usage, complete response)
+  - Error handling tests (findVideoById error, performCheckIn error, getUserDefaultTimerDays error)
+- Total: 316 tests, all passing (35 new tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (316 tests)
+
 ## Next Task
-Task 31: Create CheckIn data model
+Task 37: Implement public video endpoint

@@ -778,7 +778,7 @@ Each task includes:
   - Migration creates CheckIn table with all required fields
   - Foreign key to Video table is properly configured
   - Migration runs successfully
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 32: Implement check-in endpoint**
 - **Category:** API
@@ -787,7 +787,7 @@ Each task includes:
   - Endpoint accepts valid check-in actions
   - Returns updated video and check-in record
   - Response matches API specification
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 33: Handle PREVENT_DISTRIBUTION action**
 - **Category:** Business Logic
@@ -796,7 +796,7 @@ Each task includes:
   - Video status is updated appropriately
   - distribute_at can be extended based on action
   - User's timer_days setting is used for extension
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 34: Handle ALLOW_DISTRIBUTION action**
 - **Category:** Business Logic
@@ -805,7 +805,7 @@ Each task includes:
   - Prevention status can be reversed
   - Video returns to ACTIVE status
   - distribute_at is recalculated if needed
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 35: Log check-in actions**
 - **Category:** Auditing
@@ -814,7 +814,7 @@ Each task includes:
   - Every check-in creates a CheckIn record
   - Records include video_id, action, and timestamp
   - Historical check-ins are queryable
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 36: Write check-in unit tests**
 - **Category:** Testing
@@ -824,7 +824,7 @@ Each task includes:
   - Tests verify status transitions
   - Tests verify audit logging
   - All tests pass
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.1.6 Public Video Access
 
