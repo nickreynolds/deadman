@@ -511,5 +511,27 @@
 - Total: 246 tests, all passing (22 new video list endpoint tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (246 tests)
 
+### Task 26: Implement single video endpoint (2026-01-19)
+- Created GET /api/videos/:id endpoint in src/routes/video.routes.ts:
+  - Requires authentication via requireAuth middleware
+  - Uses findVideoById() service function to fetch video
+  - Returns 404 for non-existent video with clear error message
+  - Returns 403 for videos owned by other users (ownership validation)
+  - Returns complete video metadata for valid ID owned by user:
+    - id, title, file_size_bytes, mime_type, status
+    - distribute_at, distributed_at (null if not distributed), expires_at (null if not set)
+    - public_token, created_at, updated_at
+  - Response format matches API specification with snake_case fields
+  - Logs unauthorized access attempts for security auditing
+- Added findVideoById import to video routes
+- Used typed Request<{ id: string }> for proper TypeScript typing of path parameter
+- Created comprehensive unit tests for GET /api/videos/:id:
+  - Authentication tests (requires auth, proceeds when authenticated)
+  - Video retrieval tests (valid ID, distributed video with timestamps, 404 for non-existent)
+  - Ownership validation tests (403 for other user's video, allows own video)
+  - Error handling tests (500 on database error)
+- Total: 254 tests, all passing (8 new single video endpoint tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (254 tests)
+
 ## Next Task
-Task 26: Implement single video endpoint
+Task 27: Implement video update endpoint

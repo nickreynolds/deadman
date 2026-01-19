@@ -10,6 +10,7 @@ import {
   checkUserStorageQuota,
   getUserDefaultTimerDays,
   getVideosByUser,
+  findVideoById,
 } from '../services/video.service';
 import type { VideoStatus } from '@prisma/client';
 import { createChildLogger } from '../logger';
@@ -272,6 +273,72 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error({ err: error, userId: user.id }, 'Failed to retrieve videos');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/videos/:id
+ * Get video metadata for a specific video
+ *
+ * Path parameters:
+ *   - id: string (required) - The video UUID
+ *
+ * Response:
+ *   - 200: { video: {...} }
+ *   - 401: { error: string } - Not authenticated
+ *   - 403: { error: string } - Video owned by another user
+ *   - 404: { error: string } - Video not found
+ */
+router.get('/:id', requireAuth, async (req: Request<{ id: string }>, res: Response) => {
+  const user = getAuthenticatedUser(req);
+  const videoId = req.params.id;
+
+  try {
+    // Fetch video from database
+    const video = await findVideoById(videoId);
+
+    // Check if video exists
+    if (!video) {
+      logger.debug({ userId: user.id, videoId }, 'Video not found');
+      return res.status(404).json({
+        error: 'Video not found',
+        message: 'The requested video does not exist',
+      });
+    }
+
+    // Check ownership - user can only access their own videos
+    if (video.userId !== user.id) {
+      logger.warn(
+        { userId: user.id, videoId, ownerId: video.userId },
+        'Unauthorized access attempt to video'
+      );
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to access this video',
+      });
+    }
+
+    logger.debug({ userId: user.id, videoId }, 'Video retrieved successfully');
+
+    // Return response matching API specification
+    return res.json({
+      video: {
+        id: video.id,
+        title: video.title,
+        file_size_bytes: video.fileSizeBytes.toString(),
+        mime_type: video.mimeType,
+        status: video.status,
+        distribute_at: video.distributeAt.toISOString(),
+        distributed_at: video.distributedAt?.toISOString() ?? null,
+        expires_at: video.expiresAt?.toISOString() ?? null,
+        public_token: video.publicToken,
+        created_at: video.createdAt.toISOString(),
+        updated_at: video.updatedAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error({ err: error, userId: user.id, videoId }, 'Failed to retrieve video');
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

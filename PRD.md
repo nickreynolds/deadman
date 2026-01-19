@@ -729,7 +729,7 @@ Each task includes:
   - Returns complete video metadata for valid ID
   - Returns 404 for non-existent video
   - Returns 403 for videos owned by other users
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 27: Implement video update endpoint**
 - **Category:** API

@@ -34,6 +34,7 @@ const mockUpdateUserStorageUsage = jest.fn();
 const mockCheckUserStorageQuota = jest.fn();
 const mockGetUserDefaultTimerDays = jest.fn();
 const mockGetVideosByUser = jest.fn();
+const mockFindVideoById = jest.fn();
 
 jest.mock('../services/video.service', () => ({
   createVideo: (...args: unknown[]) => mockCreateVideo(...args),
@@ -41,6 +42,7 @@ jest.mock('../services/video.service', () => ({
   checkUserStorageQuota: (...args: unknown[]) => mockCheckUserStorageQuota(...args),
   getUserDefaultTimerDays: (...args: unknown[]) => mockGetUserDefaultTimerDays(...args),
   getVideosByUser: (...args: unknown[]) => mockGetVideosByUser(...args),
+  findVideoById: (...args: unknown[]) => mockFindVideoById(...args),
 }));
 
 // Mock upload middleware
@@ -83,11 +85,13 @@ function createMockReqRes(options: {
   file?: Express.Multer.File | null;
   body?: Record<string, unknown>;
   query?: Record<string, string>;
+  params?: Record<string, string>;
 } = {}) {
   const req = {
     body: options.body || {},
     file: options.file,
     query: options.query || {},
+    params: options.params || {},
     user: mockUser,
   } as unknown as Request;
 
@@ -1245,6 +1249,191 @@ describe('Video Routes', () => {
         const { req, res, statusMock, jsonMock } = createMockReqRes();
 
         await listHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+    });
+  });
+
+  describe('GET /:id', () => {
+    const handlers = getRouteStack('get', '/:id');
+    const authMiddleware = handlers[0]!; // requireAuth
+    const getVideoHandler = handlers[1]!; // main handler
+
+    // Create sample video data for tests
+    function createMockVideoData(overrides: Record<string, unknown> = {}) {
+      const now = new Date();
+      const distributeAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return {
+        id: 'video-id-123',
+        userId: mockUser.id,
+        title: 'Test Video',
+        filePath: 'test-user-id-123/abc123-uuid.mp4',
+        fileSizeBytes: BigInt(10485760),
+        mimeType: 'video/mp4',
+        status: 'ACTIVE',
+        distributeAt,
+        distributedAt: null,
+        expiresAt: null,
+        publicToken: 'public-token-uuid',
+        createdAt: now,
+        updatedAt: now,
+        ...overrides,
+      };
+    }
+
+    describe('Authentication', () => {
+      it('should require authentication', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        mockRequireAuth.mockImplementation((req, res, next) => {
+          res.status(401).json({ error: 'Unauthorized' });
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(401);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should proceed when authenticated', async () => {
+        const { req, res, nextMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(mockRequireAuth).toHaveBeenCalledWith(req, res, nextMock);
+        expect(nextMock).toHaveBeenCalled();
+      });
+    });
+
+    describe('Video retrieval', () => {
+      it('should return video metadata for valid ID', async () => {
+        const video = createMockVideoData();
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await getVideoHandler(req, res);
+
+        expect(mockFindVideoById).toHaveBeenCalledWith('video-id-123');
+        expect(jsonMock).toHaveBeenCalledWith({
+          video: expect.objectContaining({
+            id: 'video-id-123',
+            title: 'Test Video',
+            file_size_bytes: '10485760',
+            mime_type: 'video/mp4',
+            status: 'ACTIVE',
+            distribute_at: expect.any(String),
+            distributed_at: null,
+            expires_at: null,
+            public_token: 'public-token-uuid',
+            created_at: expect.any(String),
+            updated_at: expect.any(String),
+          }),
+        });
+      });
+
+      it('should include distributed_at and expires_at when video is distributed', async () => {
+        const distributedAt = new Date();
+        const expiresAt = new Date(distributedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const video = createMockVideoData({
+          status: 'DISTRIBUTED',
+          distributedAt,
+          expiresAt,
+        });
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await getVideoHandler(req, res);
+
+        expect(jsonMock).toHaveBeenCalledWith({
+          video: expect.objectContaining({
+            status: 'DISTRIBUTED',
+            distributed_at: distributedAt.toISOString(),
+            expires_at: expiresAt.toISOString(),
+          }),
+        });
+      });
+
+      it('should return 404 for non-existent video', async () => {
+        mockFindVideoById.mockResolvedValue(null);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'non-existent-id' },
+        });
+
+        await getVideoHandler(req, res);
+
+        expect(mockFindVideoById).toHaveBeenCalledWith('non-existent-id');
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Video not found',
+          message: 'The requested video does not exist',
+        });
+      });
+    });
+
+    describe('Ownership validation', () => {
+      it('should return 403 for video owned by another user', async () => {
+        const video = createMockVideoData({
+          userId: 'other-user-id', // Different user
+        });
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await getVideoHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(403);
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Forbidden',
+          message: 'You do not have permission to access this video',
+        });
+      });
+
+      it('should allow access to own videos', async () => {
+        const video = createMockVideoData({
+          userId: mockUser.id, // Same user
+        });
+        mockFindVideoById.mockResolvedValue(video);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await getVideoHandler(req, res);
+
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({
+          video: expect.objectContaining({
+            id: 'video-id-123',
+          }),
+        });
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should return 500 on database error', async () => {
+        mockFindVideoById.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'video-id-123' },
+        });
+
+        await getVideoHandler(req, res);
 
         expect(statusMock).toHaveBeenCalledWith(500);
         expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
