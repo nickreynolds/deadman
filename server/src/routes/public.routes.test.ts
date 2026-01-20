@@ -466,12 +466,12 @@ describe('Public Routes', () => {
         mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
 
         // Create a mock stream that emits an error
-        let errorCallback: ((err: Error) => void) | null = null;
+        let errorCallback: ((err: Error) => void) | undefined;
         const mockStream = {
           pipe: jest.fn(),
-          on: jest.fn().mockImplementation((event: string, callback: Function) => {
+          on: jest.fn().mockImplementation((event: string, callback: (err: Error) => void) => {
             if (event === 'error') {
-              errorCallback = callback as (err: Error) => void;
+              errorCallback = callback;
             }
             return mockStream;
           }),
@@ -482,7 +482,7 @@ describe('Public Routes', () => {
 
         // Simulate stream error before headers sent
         if (errorCallback) {
-          errorCallback(new Error('Stream error'));
+          (errorCallback as (err: Error) => void)(new Error('Stream error'));
         }
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -498,12 +498,12 @@ describe('Public Routes', () => {
         mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
 
         // Create a mock stream that emits an error
-        let errorCallback: ((err: Error) => void) | null = null;
+        let errorCallback: ((err: Error) => void) | undefined;
         const mockStream = {
           pipe: jest.fn(),
-          on: jest.fn().mockImplementation((event: string, callback: Function) => {
+          on: jest.fn().mockImplementation((event: string, callback: (err: Error) => void) => {
             if (event === 'error') {
-              errorCallback = callback as (err: Error) => void;
+              errorCallback = callback;
             }
             return mockStream;
           }),
@@ -521,7 +521,7 @@ describe('Public Routes', () => {
 
         // Simulate stream error after headers sent
         if (errorCallback) {
-          errorCallback(new Error('Stream error'));
+          (errorCallback as (err: Error) => void)(new Error('Stream error'));
         }
 
         // Should not send another response since headers were already sent

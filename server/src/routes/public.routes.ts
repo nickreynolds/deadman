@@ -25,7 +25,7 @@ const router: Router = Router();
  *   - 410: { error: string } - Video has expired
  *   - 500: { error: string } - Internal server error
  */
-router.get('/videos/:token', async (req: Request<{ token: string }>, res: Response) => {
+router.get('/videos/:token', async (req: Request<{ token: string }>, res: Response): Promise<void> => {
   const { token } = req.params;
 
   try {
@@ -35,10 +35,11 @@ router.get('/videos/:token', async (req: Request<{ token: string }>, res: Respon
     // Check if video exists
     if (!video) {
       logger.debug({ token }, 'Video not found for public token');
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Video not found',
         message: 'The requested video does not exist',
       });
+      return;
     }
 
     // Check video status - only DISTRIBUTED videos can be accessed
@@ -47,18 +48,20 @@ router.get('/videos/:token', async (req: Request<{ token: string }>, res: Respon
         { token, videoId: video.id, status: video.status },
         'Video not yet distributed'
       );
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Video not found',
         message: 'The requested video is not available yet',
       });
+      return;
     }
 
     if (video.status === 'EXPIRED') {
       logger.debug({ token, videoId: video.id }, 'Video has expired');
-      return res.status(410).json({
+      res.status(410).json({
         error: 'Video expired',
         message: 'This video is no longer available',
       });
+      return;
     }
 
     // Video is DISTRIBUTED - serve the file
@@ -71,10 +74,11 @@ router.get('/videos/:token', async (req: Request<{ token: string }>, res: Respon
         { token, videoId: video.id, filePath: video.filePath },
         'Video file not found on disk'
       );
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Video not found',
         message: 'The video file could not be found',
       });
+      return;
     }
 
     // Get file stats for Content-Length
@@ -112,7 +116,7 @@ router.get('/videos/:token', async (req: Request<{ token: string }>, res: Respon
     });
   } catch (error) {
     logger.error({ err: error, token }, 'Failed to retrieve video for public access');
-    return res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

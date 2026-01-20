@@ -835,7 +835,7 @@ Each task includes:
   - Endpoint accessible without authentication
   - Valid token returns video content
   - Invalid token returns 404
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 38: Validate distribution status**
 - **Category:** Security

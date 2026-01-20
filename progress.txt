@@ -655,5 +655,33 @@
 - Total: 316 tests, all passing (35 new tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (316 tests)
 
+### Task 37: Implement public video endpoint (2026-01-20)
+- Task was already implemented - verified existing implementation
+- Created GET /api/public/videos/:token endpoint in src/routes/public.routes.ts:
+  - Endpoint accessible without authentication (no requireAuth middleware)
+  - Uses findVideoByPublicToken() to look up video by public token
+  - Returns 404 for non-existent tokens
+  - Returns 404 for PENDING or ACTIVE videos ("not available yet")
+  - Returns 410 for EXPIRED videos
+  - Returns video file stream for DISTRIBUTED videos
+  - Sets proper Content-Type, Content-Length, Accept-Ranges headers
+  - Sets Content-Disposition with sanitized filename
+  - Handles file not found on disk gracefully
+  - Handles stream errors gracefully
+- Route mounted at /api/public in src/index.ts
+- Fixed TypeScript issues in public.routes.ts:
+  - Added explicit Promise<void> return type
+  - Changed returns to use void pattern (res.json(); return;)
+- Fixed TypeScript issues in public.routes.test.ts:
+  - Fixed errorCallback type casting for stream error tests
+- Created comprehensive unit tests (src/routes/public.routes.test.ts):
+  - Video lookup tests (404 for non-existent, finds by token)
+  - Video status validation tests (404 for PENDING/ACTIVE, 410 for EXPIRED, serves DISTRIBUTED)
+  - File serving tests (404 for missing file, correct headers, streaming, path construction)
+  - Error handling tests (500 on database error, stream error handling, headers-sent check)
+  - Different MIME types tests (MOV, WebM)
+- Total: 334 tests, all passing (18 new public routes tests)
+- Verified: npm run build compiles successfully, npm test passes (334 tests)
+
 ## Next Task
-Task 37: Implement public video endpoint
+Task 38: Validate distribution status
