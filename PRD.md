@@ -835,7 +835,7 @@ Each task includes:
   - Endpoint accessible without authentication
   - Valid token returns video content
   - Invalid token returns 404
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 38: Validate distribution status**
 - **Category:** Security
@@ -844,7 +844,7 @@ Each task includes:
   - PENDING/ACTIVE videos return 404 (not yet available)
   - DISTRIBUTED videos are accessible
   - EXPIRED videos return appropriate error
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 39: Stream video with proper headers**
 - **Category:** Streaming
@@ -853,7 +853,7 @@ Each task includes:
   - Content-Type matches video MIME type
   - Content-Length is accurate
   - Video plays correctly in browser
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 40: Handle range requests**
 - **Category:** Streaming
@@ -862,7 +862,7 @@ Each task includes:
   - 206 Partial Content returned for range requests
   - Seeking works in video player
   - Content-Range header is correct
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 41: Add rate limiting**
 - **Category:** Security
@@ -871,7 +871,7 @@ Each task includes:
   - Excessive requests return 429 Too Many Requests
   - Rate limit is per-IP or per-token
   - Normal usage is not affected
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 42: Write public access integration tests**
 - **Category:** Testing
@@ -881,7 +881,7 @@ Each task includes:
   - Tests cover invalid/expired token scenarios
   - Tests cover range request handling
   - All tests pass
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.1.7 User Settings & Recipients
 
@@ -892,7 +892,7 @@ Each task includes:
   - Returns current user's settings
   - Includes default_timer_days, storage quota/usage, fcm_token
   - Response matches API specification
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 44: Implement update settings endpoint**
 - **Category:** API

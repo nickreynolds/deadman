@@ -9,7 +9,7 @@ import { initializeConfig, getConfig } from './config';
 import { connectDatabase, disconnectDatabase } from './db';
 import { initializeStorage, StorageError } from './storage';
 import { configurePassport, passport } from './auth';
-import { authRoutes, videoRoutes, publicRoutes } from './routes';
+import { authRoutes, videoRoutes, publicRoutes, userRoutes } from './routes';
 
 // Initialize configuration first - exits if required variables are missing
 const config = initializeConfig();
@@ -54,6 +54,7 @@ app.get('/health', (_req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/user', userRoutes);
 
 // 404 handler for undefined routes
 app.use((_req: Request, res: Response) => {

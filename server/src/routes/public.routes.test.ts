@@ -4,6 +4,7 @@
 import { Request, Response } from 'express';
 import { mockConfig } from '../test/mocks';
 import { Readable } from 'stream';
+import { parseRangeHeader } from './public.routes';
 
 // Mock dependencies before imports
 jest.mock('../config', () => ({
@@ -48,9 +49,10 @@ jest.mock('fs', () => ({
 import publicRouter from './public.routes';
 
 // Helper to create mock Express objects
-function createMockReqRes(options: { params?: Record<string, string> } = {}) {
+function createMockReqRes(options: { params?: Record<string, string>; headers?: Record<string, string> } = {}) {
   const req = {
     params: options.params || {},
+    headers: options.headers || {},
   } as unknown as Request;
 
   const jsonMock = jest.fn();
@@ -466,12 +468,12 @@ describe('Public Routes', () => {
         mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
 
         // Create a mock stream that emits an error
-        let errorCallback: ((err: Error) => void) | null = null;
+        let errorCallback: ((err: Error) => void) | undefined;
         const mockStream = {
           pipe: jest.fn(),
-          on: jest.fn().mockImplementation((event: string, callback: Function) => {
+          on: jest.fn().mockImplementation((event: string, callback: (err: Error) => void) => {
             if (event === 'error') {
-              errorCallback = callback as (err: Error) => void;
+              errorCallback = callback;
             }
             return mockStream;
           }),
@@ -482,7 +484,7 @@ describe('Public Routes', () => {
 
         // Simulate stream error before headers sent
         if (errorCallback) {
-          errorCallback(new Error('Stream error'));
+          (errorCallback as (err: Error) => void)(new Error('Stream error'));
         }
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -498,12 +500,12 @@ describe('Public Routes', () => {
         mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
 
         // Create a mock stream that emits an error
-        let errorCallback: ((err: Error) => void) | null = null;
+        let errorCallback: ((err: Error) => void) | undefined;
         const mockStream = {
           pipe: jest.fn(),
-          on: jest.fn().mockImplementation((event: string, callback: Function) => {
+          on: jest.fn().mockImplementation((event: string, callback: (err: Error) => void) => {
             if (event === 'error') {
-              errorCallback = callback as (err: Error) => void;
+              errorCallback = callback;
             }
             return mockStream;
           }),
@@ -521,7 +523,7 @@ describe('Public Routes', () => {
 
         // Simulate stream error after headers sent
         if (errorCallback) {
-          errorCallback(new Error('Stream error'));
+          (errorCallback as (err: Error) => void)(new Error('Stream error'));
         }
 
         // Should not send another response since headers were already sent
@@ -590,6 +592,330 @@ describe('Public Routes', () => {
           'inline; filename="Test_Video.webm"'
         );
       });
+    });
+
+    describe('Range requests', () => {
+      it('should return 206 Partial Content for valid range request', async () => {
+        const { req, res, statusMock, setHeaderMock } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'bytes=0-1023' },
+        });
+
+        const mockVideo = createMockVideo({ status: 'DISTRIBUTED' });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 10485760 }); // 10 MB
+
+        // Mock the read stream
+        const mockStream = new Readable({
+          read() {
+            this.push(null);
+          },
+        });
+        mockStream.pipe = jest.fn();
+        mockCreateReadStream.mockReturnValue(mockStream);
+
+        await handler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(206);
+        expect(setHeaderMock).toHaveBeenCalledWith('Content-Range', 'bytes 0-1023/10485760');
+        expect(setHeaderMock).toHaveBeenCalledWith('Content-Length', 1024);
+      });
+
+      it('should set correct Content-Range header for range request', async () => {
+        const { req, res, setHeaderMock } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'bytes=1000-1999' },
+        });
+
+        const mockVideo = createMockVideo({ status: 'DISTRIBUTED' });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 5000 });
+
+        // Mock the read stream
+        const mockStream = new Readable({
+          read() {
+            this.push(null);
+          },
+        });
+        mockStream.pipe = jest.fn();
+        mockCreateReadStream.mockReturnValue(mockStream);
+
+        await handler(req, res);
+
+        expect(setHeaderMock).toHaveBeenCalledWith('Content-Range', 'bytes 1000-1999/5000');
+        expect(setHeaderMock).toHaveBeenCalledWith('Content-Length', 1000);
+      });
+
+      it('should handle range request with open-ended range (bytes=start-)', async () => {
+        const { req, res, setHeaderMock } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'bytes=5000-' },
+        });
+
+        const mockVideo = createMockVideo({ status: 'DISTRIBUTED' });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 10000 });
+
+        // Mock the read stream
+        const mockStream = new Readable({
+          read() {
+            this.push(null);
+          },
+        });
+        mockStream.pipe = jest.fn();
+        mockCreateReadStream.mockReturnValue(mockStream);
+
+        await handler(req, res);
+
+        // Open-ended range should go to end of file (fileSize - 1)
+        expect(setHeaderMock).toHaveBeenCalledWith('Content-Range', 'bytes 5000-9999/10000');
+        expect(setHeaderMock).toHaveBeenCalledWith('Content-Length', 5000);
+      });
+
+      it('should pass start and end options to createReadStream for range request', async () => {
+        const { req, res } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'bytes=100-199' },
+        });
+
+        const mockVideo = createMockVideo({ status: 'DISTRIBUTED' });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 1000 });
+
+        // Mock the read stream
+        const mockStream = new Readable({
+          read() {
+            this.push(null);
+          },
+        });
+        mockStream.pipe = jest.fn();
+        mockStream.on = jest.fn().mockReturnThis();
+        mockCreateReadStream.mockReturnValue(mockStream);
+
+        await handler(req, res);
+
+        expect(mockCreateReadStream).toHaveBeenCalledWith(
+          '/tmp/test-storage/user-id-123/abc123-uuid.mp4',
+          { start: 100, end: 199 }
+        );
+      });
+
+      it('should return 416 Range Not Satisfiable for invalid range format', async () => {
+        const { req, res, statusMock, jsonMock, setHeaderMock } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'invalid-range' },
+        });
+
+        const mockVideo = createMockVideo({ status: 'DISTRIBUTED' });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 10000 });
+
+        await handler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(416);
+        expect(setHeaderMock).toHaveBeenCalledWith('Content-Range', 'bytes */10000');
+        expect(jsonMock).toHaveBeenCalledWith({
+          error: 'Range not satisfiable',
+          message: 'The requested range is not valid for the video file',
+        });
+      });
+
+      it('should return 416 for range starting beyond file size', async () => {
+        const { req, res, statusMock, setHeaderMock } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'bytes=10000-10999' },
+        });
+
+        const mockVideo = createMockVideo({ status: 'DISTRIBUTED' });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 5000 });
+
+        await handler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(416);
+        expect(setHeaderMock).toHaveBeenCalledWith('Content-Range', 'bytes */5000');
+      });
+
+      it('should return 416 for range with end beyond file size', async () => {
+        const { req, res, statusMock, setHeaderMock } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'bytes=0-99999' },
+        });
+
+        const mockVideo = createMockVideo({ status: 'DISTRIBUTED' });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 5000 });
+
+        await handler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(416);
+        expect(setHeaderMock).toHaveBeenCalledWith('Content-Range', 'bytes */5000');
+      });
+
+      it('should return 416 for range with start greater than end', async () => {
+        const { req, res, statusMock } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'bytes=500-100' },
+        });
+
+        const mockVideo = createMockVideo({ status: 'DISTRIBUTED' });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 10000 });
+
+        await handler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(416);
+      });
+
+      it('should include Accept-Ranges header in range response', async () => {
+        const { req, res, setHeaderMock } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'bytes=0-99' },
+        });
+
+        const mockVideo = createMockVideo({ status: 'DISTRIBUTED' });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 1000 });
+
+        // Mock the read stream
+        const mockStream = new Readable({
+          read() {
+            this.push(null);
+          },
+        });
+        mockStream.pipe = jest.fn();
+        mockCreateReadStream.mockReturnValue(mockStream);
+
+        await handler(req, res);
+
+        expect(setHeaderMock).toHaveBeenCalledWith('Accept-Ranges', 'bytes');
+      });
+
+      it('should include Content-Disposition header in range response', async () => {
+        const { req, res, setHeaderMock } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'bytes=0-99' },
+        });
+
+        const mockVideo = createMockVideo({
+          status: 'DISTRIBUTED',
+          title: 'Test Video',
+          filePath: 'user-id-123/abc.mp4',
+        });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 1000 });
+
+        // Mock the read stream
+        const mockStream = new Readable({
+          read() {
+            this.push(null);
+          },
+        });
+        mockStream.pipe = jest.fn();
+        mockCreateReadStream.mockReturnValue(mockStream);
+
+        await handler(req, res);
+
+        expect(setHeaderMock).toHaveBeenCalledWith('Content-Disposition', 'inline; filename="Test_Video.mp4"');
+      });
+
+      it('should handle stream errors during range request', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { token: 'valid-token' },
+          headers: { range: 'bytes=0-99' },
+        });
+
+        (res as any).headersSent = false;
+
+        const mockVideo = createMockVideo({ status: 'DISTRIBUTED' });
+        mockFindVideoByPublicToken.mockResolvedValue(mockVideo);
+        mockStatSync.mockReturnValue({ size: 1000 });
+
+        // Create a mock stream that emits an error
+        let errorCallback: ((err: Error) => void) | undefined;
+        const mockStream = {
+          pipe: jest.fn(),
+          on: jest.fn().mockImplementation((event: string, callback: (err: Error) => void) => {
+            if (event === 'error') {
+              errorCallback = callback;
+            }
+            return mockStream;
+          }),
+        };
+        mockCreateReadStream.mockReturnValue(mockStream);
+
+        await handler(req, res);
+
+        // Simulate stream error
+        if (errorCallback) {
+          (errorCallback as (err: Error) => void)(new Error('Stream error'));
+        }
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+    });
+  });
+
+  describe('parseRangeHeader', () => {
+    it('should parse valid range with start and end', () => {
+      const result = parseRangeHeader('bytes=0-999', 10000);
+      expect(result).toEqual({ start: 0, end: 999, chunkSize: 1000 });
+    });
+
+    it('should parse range with only start (open-ended)', () => {
+      const result = parseRangeHeader('bytes=5000-', 10000);
+      expect(result).toEqual({ start: 5000, end: 9999, chunkSize: 5000 });
+    });
+
+    it('should return null for invalid format (missing bytes=)', () => {
+      const result = parseRangeHeader('0-999', 10000);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for invalid format (missing dash)', () => {
+      const result = parseRangeHeader('bytes=1000', 10000);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for non-numeric start', () => {
+      const result = parseRangeHeader('bytes=abc-999', 10000);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for negative start', () => {
+      const result = parseRangeHeader('bytes=-1-999', 10000);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for start >= fileSize', () => {
+      const result = parseRangeHeader('bytes=10000-10999', 10000);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for end >= fileSize', () => {
+      const result = parseRangeHeader('bytes=0-10000', 10000);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for start > end', () => {
+      const result = parseRangeHeader('bytes=500-100', 10000);
+      expect(result).toBeNull();
+    });
+
+    it('should handle first byte range', () => {
+      const result = parseRangeHeader('bytes=0-0', 10000);
+      expect(result).toEqual({ start: 0, end: 0, chunkSize: 1 });
+    });
+
+    it('should handle last byte range', () => {
+      const result = parseRangeHeader('bytes=9999-9999', 10000);
+      expect(result).toEqual({ start: 9999, end: 9999, chunkSize: 1 });
+    });
+
+    it('should handle entire file range', () => {
+      const result = parseRangeHeader('bytes=0-9999', 10000);
+      expect(result).toEqual({ start: 0, end: 9999, chunkSize: 10000 });
     });
   });
 });
