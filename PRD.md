@@ -844,7 +844,7 @@ Each task includes:
   - PENDING/ACTIVE videos return 404 (not yet available)
   - DISTRIBUTED videos are accessible
   - EXPIRED videos return appropriate error
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 39: Stream video with proper headers**
 - **Category:** Streaming
@@ -853,7 +853,7 @@ Each task includes:
   - Content-Type matches video MIME type
   - Content-Length is accurate
   - Video plays correctly in browser
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 40: Handle range requests**
 - **Category:** Streaming

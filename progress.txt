@@ -683,5 +683,36 @@
 - Total: 334 tests, all passing (18 new public routes tests)
 - Verified: npm run build compiles successfully, npm test passes (334 tests)
 
+### Task 38: Validate distribution status (2026-01-20)
+- Task verified as already complete - distribution status validation was implemented as part of Task 37
+- Implementation in src/routes/public.routes.ts:
+  - Lines 46-56: PENDING/ACTIVE videos return 404 with "not available yet" message
+  - Lines 58-65: EXPIRED videos return 410 Gone with "no longer available" message
+  - Lines 67-104: DISTRIBUTED videos are served via file streaming
+- Comprehensive tests already exist in src/routes/public.routes.test.ts:
+  - "should return 404 for PENDING videos" (lines 183-201)
+  - "should return 404 for ACTIVE videos" (lines 204-222)
+  - "should return 410 for EXPIRED videos" (lines 225-242)
+  - "should serve DISTRIBUTED videos" (lines 244-265)
+- No code changes required - marked as FINISHED
+- Verified: npm run build compiles successfully, npm test passes (334 tests)
+
+### Task 39: Stream video with proper headers (2026-01-20)
+- Task verified as already complete - video streaming was implemented as part of Task 37
+- Implementation in src/routes/public.routes.ts:
+  - Line 89: Sets Content-Type header from video.mimeType
+  - Line 90: Sets Content-Length header from file stats
+  - Line 91: Sets Accept-Ranges header for seeking support
+  - Lines 94-95: Sets Content-Disposition with sanitized filename
+  - Lines 103-104: Streams video file via fs.createReadStream().pipe(res)
+- Comprehensive tests already exist in src/routes/public.routes.test.ts:
+  - "should set correct Content-Type header" (lines 287-310)
+  - "should set correct Content-Length header" (lines 312-333)
+  - "should set Accept-Ranges header for seeking support" (lines 335-355)
+  - "should stream video file to response" (lines 386-408)
+  - Different MIME type tests for MOV and WebM files (lines 533-592)
+- No code changes required - marked as FINISHED
+- Verified: npm run build compiles successfully, npm test passes (334 tests)
+
 ## Next Task
-Task 38: Validate distribution status
+Task 40: Handle range requests
