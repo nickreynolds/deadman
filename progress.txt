@@ -737,5 +737,36 @@
 - Total: 357 tests, all passing (23 new tests)
 - Verified: npm run build compiles successfully, npm test passes (357 tests)
 
+### Task 41: Add rate limiting (2026-01-20)
+- Created src/middleware/rate-limiter.ts with comprehensive rate limiting functionality:
+  - RateLimiterStore class: In-memory store with automatic cleanup of expired entries
+  - createRateLimiter(): Factory function to create rate limiting middleware
+    - Configurable maxRequests, windowMs, and custom message
+    - Custom key generator support (default: IP-based)
+    - Skip function for conditional rate limiting
+    - Optional rate limit headers (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
+  - publicVideoRateLimiter: Pre-configured limiter for public video access (100 req/15 min per IP)
+  - publicVideoDownloadRateLimiter: Stricter limiter per IP+token (10 req/min)
+  - resetRateLimiterStore(): Helper for testing
+- Applied rate limiting to public video routes in src/routes/public.routes.ts:
+  - Added middleware import from ../middleware
+  - Applied publicVideoRateLimiter to /videos path
+  - Updated endpoint documentation with rate limit response headers and 429 status
+- Updated src/middleware/index.ts to export rate limiter functions
+- Implementation features:
+  - Uses in-memory storage (no Redis dependency for simplicity)
+  - Supports X-Forwarded-For header for proxied requests
+  - Periodic cleanup of expired entries (every 60 seconds)
+  - Returns 429 Too Many Requests with Retry-After header when exceeded
+  - Rate limit applies per IP address for the public video endpoint
+- Created comprehensive unit tests (src/middleware/rate-limiter.test.ts):
+  - Tests for createRateLimiter(): basic functionality, headers, 429 responses, custom messages
+  - Tests for key generation: IP-based, X-Forwarded-For, custom generators
+  - Tests for window behavior: reset after expiration
+  - Tests for pre-configured limiters: publicVideoRateLimiter, publicVideoDownloadRateLimiter
+  - Tests for remaining count: shows 0 at limit, never negative
+- Total: 379 tests, all passing (22 new rate limiter tests)
+- Verified: npm run build compiles successfully, npm test passes (379 tests)
+
 ## Next Task
-Task 41: Add rate limiting
+Task 42: Write public access integration tests

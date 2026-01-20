@@ -13,3 +13,11 @@ export {
   cleanupUploadedFile,
   getTempUploadPath,
 } from './upload';
+
+export {
+  createRateLimiter,
+  publicVideoRateLimiter,
+  publicVideoDownloadRateLimiter,
+  resetRateLimiterStore,
+  type RateLimiterOptions,
+} from './rate-limiter';

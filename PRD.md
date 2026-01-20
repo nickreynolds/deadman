@@ -871,7 +871,7 @@ Each task includes:
   - Excessive requests return 429 Too Many Requests
   - Rate limit is per-IP or per-token
   - Normal usage is not affected
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 42: Write public access integration tests**
 - **Category:** Testing

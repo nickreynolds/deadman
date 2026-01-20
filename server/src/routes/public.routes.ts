@@ -5,12 +5,17 @@ import { Router, Request, Response } from 'express';
 import { findVideoByPublicToken } from '../services/video.service';
 import { getStorageConfig } from '../storage';
 import { createChildLogger } from '../logger';
+import { publicVideoRateLimiter } from '../middleware';
 import fs from 'fs';
 import path from 'path';
 
 const logger = createChildLogger({ component: 'public-routes' });
 
 const router: Router = Router();
+
+// Apply rate limiting to all public video routes
+// Limits: 100 requests per 15 minutes per IP
+router.use('/videos', publicVideoRateLimiter);
 
 /**
  * Parse HTTP Range header for partial content requests.
@@ -50,6 +55,7 @@ export function parseRangeHeader(
  * GET /api/public/videos/:token
  * Download video using public token. No authentication required.
  * Supports HTTP Range requests for video seeking functionality.
+ * Rate limited to prevent abuse (100 requests per 15 minutes per IP).
  *
  * Path parameters:
  *   - token: string (required) - The video's public access token (UUID)
@@ -57,12 +63,18 @@ export function parseRangeHeader(
  * Headers:
  *   - Range: bytes=start-end (optional) - Request partial content for seeking
  *
+ * Response headers (when rate limiting is active):
+ *   - X-RateLimit-Limit: Maximum requests allowed
+ *   - X-RateLimit-Remaining: Requests remaining in current window
+ *   - X-RateLimit-Reset: Unix timestamp when the rate limit resets
+ *
  * Response:
  *   - 200: Full video file (binary stream) with proper Content-Type and Content-Length
  *   - 206: Partial content with Content-Range header for range requests
  *   - 404: { error: string } - Video not found or not yet distributed
  *   - 410: { error: string } - Video has expired
  *   - 416: Range not satisfiable
+ *   - 429: { error: string, retryAfter: number } - Rate limit exceeded
  *   - 500: { error: string } - Internal server error
  */
 router.get('/videos/:token', async (req: Request<{ token: string }>, res: Response): Promise<void> => {
