@@ -862,7 +862,7 @@ Each task includes:
   - 206 Partial Content returned for range requests
   - Seeking works in video player
   - Content-Range header is correct
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 41: Add rate limiting**
 - **Category:** Security

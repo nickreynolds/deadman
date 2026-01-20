@@ -714,5 +714,28 @@
 - No code changes required - marked as FINISHED
 - Verified: npm run build compiles successfully, npm test passes (334 tests)
 
+### Task 40: Handle range requests (2026-01-20)
+- Implemented HTTP Range header support for video seeking in src/routes/public.routes.ts:
+  - Created parseRangeHeader() helper function to parse "bytes=start-end" or "bytes=start-" format
+  - Validates range bounds against file size
+  - Returns null for invalid ranges (invalid format, start >= fileSize, end >= fileSize, start > end)
+- Updated GET /api/public/videos/:token endpoint:
+  - Returns 206 Partial Content for valid range requests
+  - Sets Content-Range header in format "bytes start-end/total"
+  - Sets Content-Length to the chunk size being returned
+  - Passes start/end options to fs.createReadStream() for efficient partial reads
+  - Returns 416 Range Not Satisfiable for invalid ranges with "bytes */fileSize" header
+  - Continues to support full file requests (200 OK) when no Range header present
+- Created comprehensive unit tests in src/routes/public.routes.test.ts:
+  - Tests for valid range requests (206 response, correct headers)
+  - Tests for open-ended ranges (bytes=start-)
+  - Tests for passing start/end to createReadStream
+  - Tests for 416 responses (invalid format, start >= fileSize, end >= fileSize, start > end)
+  - Tests for Accept-Ranges and Content-Disposition headers in range response
+  - Tests for stream error handling during range request
+  - Tests for parseRangeHeader() helper function (12 test cases)
+- Total: 357 tests, all passing (23 new tests)
+- Verified: npm run build compiles successfully, npm test passes (357 tests)
+
 ## Next Task
-Task 40: Handle range requests
+Task 41: Add rate limiting
