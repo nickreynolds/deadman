@@ -801,5 +801,25 @@
 - Total: 379 tests, all passing (no new tests needed - already complete)
 - Verified: npm run build compiles successfully, npm test passes (379 tests)
 
+### Task 43: Implement get settings endpoint (2026-01-20)
+- Created src/routes/user.routes.ts with GET /api/user/settings endpoint:
+  - Requires authentication via requireAuth middleware
+  - Uses findUserById() to fetch full user data from database
+  - Returns 404 if user not found (edge case for deleted user)
+  - Returns settings matching API specification:
+    - default_timer_days: number
+    - storage_quota_bytes: string (BigInt serialized)
+    - storage_used_bytes: string (BigInt serialized)
+    - fcm_token: string | null
+- Updated src/routes/index.ts to export userRoutes
+- Updated src/index.ts to mount user routes at /api/user
+- Created comprehensive unit tests (src/routes/user.routes.test.ts):
+  - Authentication tests (requires auth, proceeds when authenticated)
+  - Settings fetching tests (all fields, null fcm_token, BigInt serialization, timer days)
+  - Error handling tests (404 for user not found, 500 on database error)
+  - User ID from authenticated user test
+- Total: 388 tests, all passing (9 new user routes tests)
+- Verified: npm run build compiles successfully, npm test passes (388 tests)
+
 ## Next Task
-Task 43: Implement get settings endpoint
+Task 44: Implement update settings endpoint

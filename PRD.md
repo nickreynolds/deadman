@@ -892,7 +892,7 @@ Each task includes:
   - Returns current user's settings
   - Includes default_timer_days, storage quota/usage, fcm_token
   - Response matches API specification
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 44: Implement update settings endpoint**
 - **Category:** API
