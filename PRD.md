@@ -881,7 +881,7 @@ Each task includes:
   - Tests cover invalid/expired token scenarios
   - Tests cover range request handling
   - All tests pass
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.1.7 User Settings & Recipients
 

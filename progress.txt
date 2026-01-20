@@ -768,5 +768,38 @@
 - Total: 379 tests, all passing (22 new rate limiter tests)
 - Verified: npm run build compiles successfully, npm test passes (379 tests)
 
+### Task 42: Write public access integration tests (2026-01-20)
+- Task verified as already complete - integration tests were written during Tasks 37-41 implementation
+- Comprehensive test suite exists in src/routes/public.routes.test.ts (18 tests)
+- Valid token access tests:
+  - Video lookup by public token
+  - Successful video serving for DISTRIBUTED status
+  - File streaming with correct path construction
+- Invalid/expired token scenarios:
+  - 404 for non-existent tokens
+  - 404 for PENDING videos (not yet available)
+  - 404 for ACTIVE videos (not yet available)
+  - 410 for EXPIRED videos
+  - 404 for missing file on disk
+- Range request handling tests:
+  - 206 Partial Content for valid range requests
+  - Correct Content-Range header format
+  - Open-ended range support (bytes=start-)
+  - Start/end options passed to createReadStream
+  - 416 Range Not Satisfiable for invalid format
+  - 416 for range starting beyond file size
+  - 416 for range with end beyond file size
+  - 416 for start > end
+  - Accept-Ranges and Content-Disposition headers in range response
+  - Stream error handling during range request
+- Additional tests:
+  - Different MIME types (MOV, WebM)
+  - Content-Type, Content-Length, Accept-Ranges headers
+  - Content-Disposition with sanitized filename
+  - Database error handling (500)
+  - Stream error handling with headersSent check
+- Total: 379 tests, all passing (no new tests needed - already complete)
+- Verified: npm run build compiles successfully, npm test passes (379 tests)
+
 ## Next Task
-Task 42: Write public access integration tests
+Task 43: Implement get settings endpoint
