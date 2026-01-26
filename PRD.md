@@ -948,7 +948,7 @@ Each task includes:
   - Tests cover all recipient CRUD operations
   - Tests cover validation and authorization
   - All tests pass
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.1.8 Admin Endpoints
 
@@ -960,7 +960,7 @@ Each task includes:
   - Optional is_admin and storage_quota can be set
   - Returns created user (without password)
   - Non-admins receive 403
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 51: Implement list users endpoint**
 - **Category:** Admin API
@@ -969,7 +969,7 @@ Each task includes:
   - Returns list of all users
   - Includes storage usage statistics
   - Non-admins receive 403
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 52: Implement update user endpoint**
 - **Category:** Admin API
@@ -978,7 +978,7 @@ Each task includes:
   - Admin can update storage_quota and is_admin flag
   - Returns updated user
   - Non-admins receive 403
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 53: Implement delete user endpoint**
 - **Category:** Admin API
@@ -988,7 +988,7 @@ Each task includes:
   - Video files are removed from storage
   - Recipients are deleted
   - Returns success confirmation
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 54: Implement get system config endpoint**
 - **Category:** Admin API

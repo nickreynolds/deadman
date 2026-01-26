@@ -944,5 +944,45 @@
 - No additional code changes required - marked as FINISHED
 - Verified: pnpm run build compiles successfully, pnpm test passes (463 tests)
 
+### Task 49: Write settings and recipients unit tests (2026-01-26)
+- Task verified as already complete - tests were written during Tasks 43-48 implementation
+- Comprehensive test coverage exists:
+  - src/routes/user.routes.test.ts: 70 test cases covering GET/PATCH settings, GET/POST/DELETE recipients
+  - src/services/recipient.service.test.ts: 14 test cases covering all service functions
+- Tests cover all settings operations, recipient CRUD operations, validation and authorization
+- No additional code changes required - marked as FINISHED
+- Verified: pnpm run build compiles successfully, pnpm test passes (463 tests)
+
+### Tasks 50-53: Implement Admin User Endpoints (2026-01-26)
+- Created src/routes/admin.routes.ts with all admin user management endpoints:
+  - POST /api/admin/users: Create new user with admin-only access
+    - Validates username (required, 3-50 chars, unique)
+    - Validates password (required, min 8 chars)
+    - Optional is_admin (boolean) and storage_quota_bytes (positive number)
+    - Returns 409 if username exists
+    - Returns created user without password
+  - GET /api/admin/users: List all users with admin-only access
+    - Returns all users with id, username, is_admin, storage stats, created_at
+    - Does not include passwords in response
+  - PATCH /api/admin/users/:id: Update user properties with admin-only access
+    - Accepts optional is_admin (boolean) and storage_quota_bytes (positive number)
+    - Returns 404 if user not found
+    - Returns updated user
+  - DELETE /api/admin/users/:id: Delete user with admin-only access
+    - Cascade deletes related records (videos, recipients) via Prisma schema
+    - Returns 404 if user not found
+    - Returns { success: true }
+- All endpoints use requireAuth and requireAdmin middleware for authorization
+- Updated src/routes/index.ts to export adminRoutes
+- Updated src/index.ts to mount admin routes at /api/admin
+- Created comprehensive unit tests (src/routes/admin.routes.test.ts):
+  - Authentication and authorization tests for all endpoints
+  - Request validation tests (username, password, is_admin, storage_quota_bytes)
+  - Duplicate username handling tests
+  - Successful CRUD operation tests
+  - Error handling tests
+- Total: 509 tests, all passing (46 new admin routes tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (509 tests)
+
 ## Next Task
-Task 49: Write settings and recipients unit tests
+Task 54: Implement get system config endpoint
