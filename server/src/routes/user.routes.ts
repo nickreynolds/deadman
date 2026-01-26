@@ -1,10 +1,12 @@
 // User routes - handles user settings and recipients
 // GET /api/user/settings - Get user settings
 // PATCH /api/user/settings - Update user settings
+// GET /api/user/recipients - Get user's distribution recipients
 
 import { Router, Request, Response } from 'express';
 import { requireAuth, getAuthenticatedUser } from '../auth';
 import { findUserById, updateUser } from '../services/user.service';
+import { getRecipientsByUserId } from '../services/recipient.service';
 import { createChildLogger } from '../logger';
 
 const logger = createChildLogger({ component: 'user-routes' });
@@ -147,6 +149,36 @@ router.patch('/settings', requireAuth, async (req: Request, res: Response): Prom
     });
   } catch (error) {
     logger.error({ err: error }, 'Error updating user settings');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/user/recipients
+ * Get user's distribution recipients
+ *
+ * Response:
+ *   - 200: { recipients: [{ id, email, name }, ...] }
+ *   - 401: { error: string } - Not authenticated
+ *   - 500: { error: string } - Server error
+ */
+router.get('/recipients', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authUser = getAuthenticatedUser(req);
+
+    const recipients = await getRecipientsByUserId(authUser.id);
+
+    logger.debug({ userId: authUser.id, count: recipients.length }, 'Fetched user recipients');
+
+    res.json({
+      recipients: recipients.map((r) => ({
+        id: r.id,
+        email: r.email,
+        name: r.name,
+      })),
+    });
+  } catch (error) {
+    logger.error({ err: error }, 'Error fetching user recipients');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

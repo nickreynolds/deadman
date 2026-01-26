@@ -1,6 +1,7 @@
-// Unit tests for User Settings Routes
+// Unit tests for User Settings and Recipients Routes
 // Tests GET /api/user/settings
 // Tests PATCH /api/user/settings
+// Tests GET /api/user/recipients
 
 import { Request, Response, NextFunction } from 'express';
 import { mockConfig, createMockUser } from '../test/mocks';
@@ -26,6 +27,13 @@ const mockUpdateUser = jest.fn();
 jest.mock('../services/user.service', () => ({
   findUserById: (...args: unknown[]) => mockFindUserById(...args),
   updateUser: (...args: unknown[]) => mockUpdateUser(...args),
+}));
+
+// Mock recipient service functions
+const mockGetRecipientsByUserId = jest.fn();
+
+jest.mock('../services/recipient.service', () => ({
+  getRecipientsByUserId: (...args: unknown[]) => mockGetRecipientsByUserId(...args),
 }));
 
 // Mock authentication middleware
@@ -600,6 +608,159 @@ describe('User Routes', () => {
         await updateSettingsHandler(req, res);
 
         expect(mockUpdateUser).toHaveBeenCalledWith('different-user-id-456', { defaultTimerDays: 7 });
+      });
+    });
+  });
+
+  describe('GET /recipients', () => {
+    const handlers = getRouteStack('get', '/recipients');
+    const authMiddleware = handlers[0]!; // requireAuth
+    const getRecipientsHandler = handlers[1]!; // main handler
+
+    describe('Authentication', () => {
+      it('should require authentication', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes();
+
+        mockRequireAuth.mockImplementation((req, res, next) => {
+          res.status(401).json({ error: 'Unauthorized' });
+          // Don't call next() to simulate blocked request
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(401);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should proceed when authenticated', async () => {
+        const { req, res, nextMock } = createMockReqRes();
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(nextMock).toHaveBeenCalled();
+      });
+    });
+
+    describe('Fetching recipients', () => {
+      it('should return empty array when user has no recipients', async () => {
+        mockGetRecipientsByUserId.mockResolvedValue([]);
+
+        const { req, res, jsonMock } = createMockReqRes();
+
+        await getRecipientsHandler(req, res);
+
+        expect(mockGetRecipientsByUserId).toHaveBeenCalledWith('test-user-id-123');
+        expect(jsonMock).toHaveBeenCalledWith({
+          recipients: [],
+        });
+      });
+
+      it('should return recipients with all fields', async () => {
+        const mockRecipients = [
+          {
+            id: 'recipient-1',
+            userId: 'test-user-id-123',
+            email: 'john@example.com',
+            name: 'John Doe',
+            createdAt: new Date('2026-01-15'),
+          },
+          {
+            id: 'recipient-2',
+            userId: 'test-user-id-123',
+            email: 'jane@example.com',
+            name: 'Jane Smith',
+            createdAt: new Date('2026-01-16'),
+          },
+        ];
+        mockGetRecipientsByUserId.mockResolvedValue(mockRecipients);
+
+        const { req, res, jsonMock } = createMockReqRes();
+
+        await getRecipientsHandler(req, res);
+
+        expect(jsonMock).toHaveBeenCalledWith({
+          recipients: [
+            { id: 'recipient-1', email: 'john@example.com', name: 'John Doe' },
+            { id: 'recipient-2', email: 'jane@example.com', name: 'Jane Smith' },
+          ],
+        });
+      });
+
+      it('should return null for name when not set', async () => {
+        const mockRecipients = [
+          {
+            id: 'recipient-1',
+            userId: 'test-user-id-123',
+            email: 'anonymous@example.com',
+            name: null,
+            createdAt: new Date('2026-01-15'),
+          },
+        ];
+        mockGetRecipientsByUserId.mockResolvedValue(mockRecipients);
+
+        const { req, res, jsonMock } = createMockReqRes();
+
+        await getRecipientsHandler(req, res);
+
+        expect(jsonMock).toHaveBeenCalledWith({
+          recipients: [{ id: 'recipient-1', email: 'anonymous@example.com', name: null }],
+        });
+      });
+
+      it('should not include createdAt or userId in response', async () => {
+        const mockRecipients = [
+          {
+            id: 'recipient-1',
+            userId: 'test-user-id-123',
+            email: 'test@example.com',
+            name: 'Test User',
+            createdAt: new Date('2026-01-15'),
+          },
+        ];
+        mockGetRecipientsByUserId.mockResolvedValue(mockRecipients);
+
+        const { req, res, jsonMock } = createMockReqRes();
+
+        await getRecipientsHandler(req, res);
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.recipients[0]).not.toHaveProperty('userId');
+        expect(response.recipients[0]).not.toHaveProperty('createdAt');
+        expect(response.recipients[0]).toEqual({
+          id: 'recipient-1',
+          email: 'test@example.com',
+          name: 'Test User',
+        });
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should return 500 on database error', async () => {
+        mockGetRecipientsByUserId.mockRejectedValue(new Error('Database connection failed'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes();
+
+        await getRecipientsHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+    });
+
+    describe('User ID from authenticated user', () => {
+      it('should use authenticated user ID for lookup', async () => {
+        const differentIdUser = createMockUser({
+          id: 'different-user-id-789',
+        });
+        mockGetAuthenticatedUser.mockReturnValue(differentIdUser);
+        mockGetRecipientsByUserId.mockResolvedValue([]);
+
+        const { req, res } = createMockReqRes();
+
+        await getRecipientsHandler(req, res);
+
+        expect(mockGetRecipientsByUserId).toHaveBeenCalledWith('different-user-id-789');
       });
     });
   });

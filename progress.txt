@@ -850,5 +850,33 @@
 - Total: 408 tests, all passing (20 new user settings tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (408 tests)
 
+### Task 45: Implement get recipients endpoint (2026-01-26)
+- Created src/services/recipient.service.ts with recipient management functions:
+  - getRecipientsByUserId(): Gets all recipients for a user ordered by creation date desc
+  - findRecipientById(): Finds a recipient by ID
+  - createRecipient(): Creates a new recipient with email and optional name
+  - deleteRecipient(): Deletes a recipient, returns true if deleted, false if not found
+  - recipientEmailExists(): Case-insensitive check if email already exists for user
+- Created GET /api/user/recipients endpoint in src/routes/user.routes.ts:
+  - Requires authentication via requireAuth middleware
+  - Uses getRecipientsByUserId() to fetch recipients for authenticated user
+  - Returns list of recipients with id, email, name fields
+  - Does not include userId or createdAt in response (API specification compliance)
+  - Returns 401 for unauthenticated requests
+  - Returns 500 on database errors
+- Created comprehensive unit tests for recipient service (src/services/recipient.service.test.ts):
+  - Tests for getRecipientsByUserId(): fetching, empty results, ordering
+  - Tests for findRecipientById(): found and not found cases
+  - Tests for createRecipient(): with name, without name, empty name handling
+  - Tests for deleteRecipient(): success, not found (P2025), other errors
+  - Tests for recipientEmailExists(): exists, not exists, case-insensitive comparison
+- Created comprehensive unit tests for GET /api/user/recipients in src/routes/user.routes.test.ts:
+  - Authentication tests (requires auth, proceeds when authenticated)
+  - Fetching tests (empty array, all fields, null name, excludes userId/createdAt)
+  - Error handling tests (500 on database error)
+  - User ID from authenticated user test
+- Total: 430 tests, all passing (22 new tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (430 tests)
+
 ## Next Task
-Task 45: Implement get recipients endpoint
+Task 46: Implement add recipient endpoint

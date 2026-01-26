@@ -910,7 +910,7 @@ Each task includes:
   - Returns list of user's recipients
   - Each recipient includes id, email, name
   - Response matches API specification
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 46: Implement add recipient endpoint**
 - **Category:** API
