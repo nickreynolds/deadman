@@ -821,5 +821,34 @@
 - Total: 388 tests, all passing (9 new user routes tests)
 - Verified: npm run build compiles successfully, npm test passes (388 tests)
 
+### Task 44: Implement update settings endpoint (2026-01-26)
+- Created PATCH /api/user/settings endpoint in src/routes/user.routes.ts:
+  - Requires authentication via requireAuth middleware
+  - Accepts optional fields: default_timer_days (number), fcm_token (string | null)
+  - Validates default_timer_days:
+    - Must be a number
+    - Must be an integer
+    - Must be at least 1
+    - Cannot exceed 365
+  - Validates fcm_token:
+    - Must be a string (or null to clear)
+  - If no fields provided, returns current settings without update
+  - Uses updateUser() from user service to persist changes
+  - Returns { settings: { default_timer_days, storage_quota_bytes, storage_used_bytes, fcm_token } }
+  - Returns 400 for invalid request body
+  - Returns 404 if user not found
+  - Returns 500 on database error
+- Added import for updateUser from user.service
+- Created comprehensive unit tests in src/routes/user.routes.test.ts:
+  - Authentication tests (requires auth, proceeds when authenticated)
+  - Request validation tests for default_timer_days (non-number, non-integer, < 1, negative, > 365)
+  - Request validation tests for fcm_token (non-string, null accepted)
+  - No fields provided tests (returns current settings, 404 for user not found)
+  - Successful update tests (timer days, fcm_token, both fields, min/max values, complete response)
+  - Error handling tests (404 on user not found, 500 on database error)
+  - User ID from authenticated user test
+- Total: 408 tests, all passing (20 new user settings tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (408 tests)
+
 ## Next Task
-Task 44: Implement update settings endpoint
+Task 45: Implement get recipients endpoint

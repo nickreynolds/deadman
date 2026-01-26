@@ -901,7 +901,7 @@ Each task includes:
   - Settings are updated successfully
   - Partial updates work (only provided fields)
   - Returns updated settings
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 45: Implement get recipients endpoint**
 - **Category:** API

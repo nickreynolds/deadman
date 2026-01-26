@@ -1,5 +1,6 @@
 // Unit tests for User Settings Routes
 // Tests GET /api/user/settings
+// Tests PATCH /api/user/settings
 
 import { Request, Response, NextFunction } from 'express';
 import { mockConfig, createMockUser } from '../test/mocks';
@@ -20,9 +21,11 @@ jest.mock('../logger', () => ({
 
 // Mock user service functions
 const mockFindUserById = jest.fn();
+const mockUpdateUser = jest.fn();
 
 jest.mock('../services/user.service', () => ({
   findUserById: (...args: unknown[]) => mockFindUserById(...args),
+  updateUser: (...args: unknown[]) => mockUpdateUser(...args),
 }));
 
 // Mock authentication middleware
@@ -246,6 +249,357 @@ describe('User Routes', () => {
         await getSettingsHandler(req, res);
 
         expect(mockFindUserById).toHaveBeenCalledWith('different-user-id');
+      });
+    });
+  });
+
+  describe('PATCH /settings', () => {
+    const handlers = getRouteStack('patch', '/settings');
+    const authMiddleware = handlers[0]!; // requireAuth
+    const updateSettingsHandler = handlers[1]!; // main handler
+
+    describe('Authentication', () => {
+      it('should require authentication', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes();
+
+        mockRequireAuth.mockImplementation((req, res, next) => {
+          res.status(401).json({ error: 'Unauthorized' });
+          // Don't call next() to simulate blocked request
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(401);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should proceed when authenticated', async () => {
+        const { req, res, nextMock } = createMockReqRes();
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(nextMock).toHaveBeenCalled();
+      });
+    });
+
+    describe('Request validation - default_timer_days', () => {
+      it('should return 400 when default_timer_days is not a number', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { default_timer_days: 'seven' },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'default_timer_days must be a number' });
+      });
+
+      it('should return 400 when default_timer_days is not an integer', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { default_timer_days: 7.5 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'default_timer_days must be an integer' });
+      });
+
+      it('should return 400 when default_timer_days is less than 1', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { default_timer_days: 0 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'default_timer_days must be at least 1' });
+      });
+
+      it('should return 400 when default_timer_days is negative', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { default_timer_days: -5 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'default_timer_days must be at least 1' });
+      });
+
+      it('should return 400 when default_timer_days exceeds 365', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { default_timer_days: 400 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'default_timer_days cannot exceed 365' });
+      });
+    });
+
+    describe('Request validation - fcm_token', () => {
+      it('should return 400 when fcm_token is not a string', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { fcm_token: 12345 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'fcm_token must be a string' });
+      });
+
+      it('should accept null fcm_token to clear it', async () => {
+        const updatedUser = {
+          ...mockUser,
+          fcmToken: null,
+        };
+        mockUpdateUser.mockResolvedValue(updatedUser);
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          body: { fcm_token: null },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(mockUpdateUser).toHaveBeenCalledWith('test-user-id-123', { fcmToken: null });
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            settings: expect.objectContaining({
+              fcm_token: null,
+            }),
+          })
+        );
+      });
+    });
+
+    describe('No fields provided', () => {
+      it('should return current settings when no fields provided', async () => {
+        const currentUser = {
+          ...mockUser,
+          defaultTimerDays: 14,
+          storageQuotaBytes: BigInt(1073741824),
+          storageUsedBytes: BigInt(524288000),
+          fcmToken: 'existing-token',
+        };
+        mockFindUserById.mockResolvedValue(currentUser);
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          body: {},
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(mockUpdateUser).not.toHaveBeenCalled();
+        expect(mockFindUserById).toHaveBeenCalledWith('test-user-id-123');
+        expect(jsonMock).toHaveBeenCalledWith({
+          settings: {
+            default_timer_days: 14,
+            storage_quota_bytes: '1073741824',
+            storage_used_bytes: '524288000',
+            fcm_token: 'existing-token',
+          },
+        });
+      });
+
+      it('should return 404 when user not found with empty body', async () => {
+        mockFindUserById.mockResolvedValue(null);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: {},
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'User not found' });
+      });
+    });
+
+    describe('Successful updates', () => {
+      it('should update default_timer_days', async () => {
+        const updatedUser = {
+          ...mockUser,
+          defaultTimerDays: 30,
+        };
+        mockUpdateUser.mockResolvedValue(updatedUser);
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          body: { default_timer_days: 30 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(mockUpdateUser).toHaveBeenCalledWith('test-user-id-123', { defaultTimerDays: 30 });
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            settings: expect.objectContaining({
+              default_timer_days: 30,
+            }),
+          })
+        );
+      });
+
+      it('should update fcm_token', async () => {
+        const updatedUser = {
+          ...mockUser,
+          fcmToken: 'new-fcm-token-xyz',
+        };
+        mockUpdateUser.mockResolvedValue(updatedUser);
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          body: { fcm_token: 'new-fcm-token-xyz' },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(mockUpdateUser).toHaveBeenCalledWith('test-user-id-123', { fcmToken: 'new-fcm-token-xyz' });
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            settings: expect.objectContaining({
+              fcm_token: 'new-fcm-token-xyz',
+            }),
+          })
+        );
+      });
+
+      it('should update both default_timer_days and fcm_token', async () => {
+        const updatedUser = {
+          ...mockUser,
+          defaultTimerDays: 21,
+          fcmToken: 'updated-token',
+        };
+        mockUpdateUser.mockResolvedValue(updatedUser);
+
+        const { req, res, jsonMock } = createMockReqRes({
+          body: { default_timer_days: 21, fcm_token: 'updated-token' },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(mockUpdateUser).toHaveBeenCalledWith('test-user-id-123', {
+          defaultTimerDays: 21,
+          fcmToken: 'updated-token',
+        });
+        expect(jsonMock).toHaveBeenCalledWith({
+          settings: expect.objectContaining({
+            default_timer_days: 21,
+            fcm_token: 'updated-token',
+          }),
+        });
+      });
+
+      it('should accept minimum timer value (1 day)', async () => {
+        const updatedUser = {
+          ...mockUser,
+          defaultTimerDays: 1,
+        };
+        mockUpdateUser.mockResolvedValue(updatedUser);
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          body: { default_timer_days: 1 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(mockUpdateUser).toHaveBeenCalledWith('test-user-id-123', { defaultTimerDays: 1 });
+      });
+
+      it('should accept maximum timer value (365 days)', async () => {
+        const updatedUser = {
+          ...mockUser,
+          defaultTimerDays: 365,
+        };
+        mockUpdateUser.mockResolvedValue(updatedUser);
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          body: { default_timer_days: 365 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(mockUpdateUser).toHaveBeenCalledWith('test-user-id-123', { defaultTimerDays: 365 });
+      });
+
+      it('should return complete settings object in response', async () => {
+        const updatedUser = {
+          ...mockUser,
+          defaultTimerDays: 10,
+          storageQuotaBytes: BigInt(2147483648),
+          storageUsedBytes: BigInt(1073741824),
+          fcmToken: 'token-123',
+        };
+        mockUpdateUser.mockResolvedValue(updatedUser);
+
+        const { req, res, jsonMock } = createMockReqRes({
+          body: { default_timer_days: 10 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(jsonMock).toHaveBeenCalledWith({
+          settings: {
+            default_timer_days: 10,
+            storage_quota_bytes: '2147483648',
+            storage_used_bytes: '1073741824',
+            fcm_token: 'token-123',
+          },
+        });
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should return 404 when user not found during update', async () => {
+        mockUpdateUser.mockResolvedValue(null);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { default_timer_days: 14 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'User not found' });
+      });
+
+      it('should return 500 on database error', async () => {
+        mockUpdateUser.mockRejectedValue(new Error('Database connection failed'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { default_timer_days: 14 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+    });
+
+    describe('User ID from authenticated user', () => {
+      it('should use authenticated user ID for update', async () => {
+        const differentIdUser = createMockUser({
+          id: 'different-user-id-456',
+        });
+        mockGetAuthenticatedUser.mockReturnValue(differentIdUser);
+        mockUpdateUser.mockResolvedValue(differentIdUser);
+
+        const { req, res } = createMockReqRes({
+          body: { default_timer_days: 7 },
+        });
+
+        await updateSettingsHandler(req, res);
+
+        expect(mockUpdateUser).toHaveBeenCalledWith('different-user-id-456', { defaultTimerDays: 7 });
       });
     });
   });
