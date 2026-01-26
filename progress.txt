@@ -878,5 +878,37 @@
 - Total: 430 tests, all passing (22 new tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (430 tests)
 
+### Task 46: Implement add recipient endpoint (2026-01-26)
+- Created POST /api/user/recipients endpoint in src/routes/user.routes.ts:
+  - Requires authentication via requireAuth middleware
+  - Validates email field:
+    - Required (returns 400 if missing)
+    - Must be a string (returns 400 if not)
+    - Cannot be empty or whitespace-only (returns 400)
+    - Must match basic email format regex (returns 400 for invalid format)
+  - Validates name field (optional):
+    - Must be a string if provided (returns 400 if not)
+    - Null is accepted to indicate no name
+  - Trims whitespace from email and name
+  - Checks for duplicate emails case-insensitively using recipientEmailExists()
+  - Returns 409 Conflict if email already exists for user
+  - Creates recipient using createRecipient() from recipient service
+  - Returns 201 Created with { recipient: { id, email, name } }
+  - Does not include userId or createdAt in response (API specification compliance)
+  - Returns 500 on database errors
+- Added imports for createRecipient and recipientEmailExists to user routes
+- Created comprehensive unit tests in src/routes/user.routes.test.ts (23 new tests):
+  - Authentication tests (requires auth, proceeds when authenticated)
+  - Email validation tests (missing, null, non-string, empty, whitespace, invalid formats)
+  - Name validation tests (non-string, null accepted)
+  - Duplicate email handling tests (409 response, createRecipient not called)
+  - Successful creation tests (email only, email and name, whitespace trimming)
+  - Empty/whitespace name treated as undefined tests
+  - Response format tests (excludes userId/createdAt)
+  - Error handling tests (recipientEmailExists error, createRecipient error)
+  - User ID from authenticated user tests
+- Total: 453 tests, all passing (23 new tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (453 tests)
+
 ## Next Task
-Task 46: Implement add recipient endpoint
+Task 47: Implement delete recipient endpoint

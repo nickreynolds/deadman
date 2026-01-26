@@ -920,7 +920,7 @@ Each task includes:
   - Invalid email format returns 400
   - Duplicate emails are handled appropriately
   - Returns created recipient
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 47: Implement delete recipient endpoint**
 - **Category:** API

@@ -31,9 +31,13 @@ jest.mock('../services/user.service', () => ({
 
 // Mock recipient service functions
 const mockGetRecipientsByUserId = jest.fn();
+const mockCreateRecipient = jest.fn();
+const mockRecipientEmailExists = jest.fn();
 
 jest.mock('../services/recipient.service', () => ({
   getRecipientsByUserId: (...args: unknown[]) => mockGetRecipientsByUserId(...args),
+  createRecipient: (...args: unknown[]) => mockCreateRecipient(...args),
+  recipientEmailExists: (...args: unknown[]) => mockRecipientEmailExists(...args),
 }));
 
 // Mock authentication middleware
@@ -761,6 +765,406 @@ describe('User Routes', () => {
         await getRecipientsHandler(req, res);
 
         expect(mockGetRecipientsByUserId).toHaveBeenCalledWith('different-user-id-789');
+      });
+    });
+  });
+
+  describe('POST /recipients', () => {
+    const handlers = getRouteStack('post', '/recipients');
+    const authMiddleware = handlers[0]!; // requireAuth
+    const addRecipientHandler = handlers[1]!; // main handler
+
+    describe('Authentication', () => {
+      it('should require authentication', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes();
+
+        mockRequireAuth.mockImplementation((req, res, next) => {
+          res.status(401).json({ error: 'Unauthorized' });
+          // Don't call next() to simulate blocked request
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(401);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should proceed when authenticated', async () => {
+        const { req, res, nextMock } = createMockReqRes();
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(nextMock).toHaveBeenCalled();
+      });
+    });
+
+    describe('Request validation - email', () => {
+      it('should return 400 when email is missing', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { name: 'John Doe' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'email is required' });
+      });
+
+      it('should return 400 when email is null', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: null },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'email is required' });
+      });
+
+      it('should return 400 when email is not a string', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 12345 },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'email must be a string' });
+      });
+
+      it('should return 400 when email is empty string', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: '' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'email cannot be empty' });
+      });
+
+      it('should return 400 when email is only whitespace', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: '   ' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'email cannot be empty' });
+      });
+
+      it('should return 400 when email format is invalid - missing @', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 'invalidemail.com' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Invalid email format' });
+      });
+
+      it('should return 400 when email format is invalid - missing domain', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 'invalid@' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Invalid email format' });
+      });
+
+      it('should return 400 when email format is invalid - missing TLD', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 'invalid@domain' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Invalid email format' });
+      });
+    });
+
+    describe('Request validation - name', () => {
+      it('should return 400 when name is not a string', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 'valid@example.com', name: 12345 },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'name must be a string' });
+      });
+
+      it('should accept null name', async () => {
+        mockRecipientEmailExists.mockResolvedValue(false);
+        const createdRecipient = {
+          id: 'new-recipient-id',
+          userId: 'test-user-id-123',
+          email: 'test@example.com',
+          name: null,
+          createdAt: new Date(),
+        };
+        mockCreateRecipient.mockResolvedValue(createdRecipient);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 'test@example.com', name: null },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(201);
+        expect(mockCreateRecipient).toHaveBeenCalledWith('test-user-id-123', 'test@example.com', undefined);
+      });
+    });
+
+    describe('Duplicate email handling', () => {
+      it('should return 409 when email already exists for user', async () => {
+        mockRecipientEmailExists.mockResolvedValue(true);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 'existing@example.com' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(mockRecipientEmailExists).toHaveBeenCalledWith('test-user-id-123', 'existing@example.com');
+        expect(statusMock).toHaveBeenCalledWith(409);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'A recipient with this email already exists' });
+        expect(mockCreateRecipient).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Successful recipient creation', () => {
+      it('should create recipient with email only', async () => {
+        mockRecipientEmailExists.mockResolvedValue(false);
+        const createdRecipient = {
+          id: 'new-recipient-id',
+          userId: 'test-user-id-123',
+          email: 'john@example.com',
+          name: null,
+          createdAt: new Date(),
+        };
+        mockCreateRecipient.mockResolvedValue(createdRecipient);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 'john@example.com' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(mockRecipientEmailExists).toHaveBeenCalledWith('test-user-id-123', 'john@example.com');
+        expect(mockCreateRecipient).toHaveBeenCalledWith('test-user-id-123', 'john@example.com', undefined);
+        expect(statusMock).toHaveBeenCalledWith(201);
+        expect(jsonMock).toHaveBeenCalledWith({
+          recipient: {
+            id: 'new-recipient-id',
+            email: 'john@example.com',
+            name: null,
+          },
+        });
+      });
+
+      it('should create recipient with email and name', async () => {
+        mockRecipientEmailExists.mockResolvedValue(false);
+        const createdRecipient = {
+          id: 'new-recipient-id',
+          userId: 'test-user-id-123',
+          email: 'jane@example.com',
+          name: 'Jane Smith',
+          createdAt: new Date(),
+        };
+        mockCreateRecipient.mockResolvedValue(createdRecipient);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 'jane@example.com', name: 'Jane Smith' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(mockCreateRecipient).toHaveBeenCalledWith('test-user-id-123', 'jane@example.com', 'Jane Smith');
+        expect(statusMock).toHaveBeenCalledWith(201);
+        expect(jsonMock).toHaveBeenCalledWith({
+          recipient: {
+            id: 'new-recipient-id',
+            email: 'jane@example.com',
+            name: 'Jane Smith',
+          },
+        });
+      });
+
+      it('should trim email whitespace', async () => {
+        mockRecipientEmailExists.mockResolvedValue(false);
+        const createdRecipient = {
+          id: 'new-recipient-id',
+          userId: 'test-user-id-123',
+          email: 'trimmed@example.com',
+          name: null,
+          createdAt: new Date(),
+        };
+        mockCreateRecipient.mockResolvedValue(createdRecipient);
+
+        const { req, res, statusMock } = createMockReqRes({
+          body: { email: '  trimmed@example.com  ' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(mockRecipientEmailExists).toHaveBeenCalledWith('test-user-id-123', 'trimmed@example.com');
+        expect(mockCreateRecipient).toHaveBeenCalledWith('test-user-id-123', 'trimmed@example.com', undefined);
+        expect(statusMock).toHaveBeenCalledWith(201);
+      });
+
+      it('should trim name whitespace', async () => {
+        mockRecipientEmailExists.mockResolvedValue(false);
+        const createdRecipient = {
+          id: 'new-recipient-id',
+          userId: 'test-user-id-123',
+          email: 'test@example.com',
+          name: 'Trimmed Name',
+          createdAt: new Date(),
+        };
+        mockCreateRecipient.mockResolvedValue(createdRecipient);
+
+        const { req, res, statusMock } = createMockReqRes({
+          body: { email: 'test@example.com', name: '  Trimmed Name  ' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(mockCreateRecipient).toHaveBeenCalledWith('test-user-id-123', 'test@example.com', 'Trimmed Name');
+        expect(statusMock).toHaveBeenCalledWith(201);
+      });
+
+      it('should treat empty name as undefined', async () => {
+        mockRecipientEmailExists.mockResolvedValue(false);
+        const createdRecipient = {
+          id: 'new-recipient-id',
+          userId: 'test-user-id-123',
+          email: 'test@example.com',
+          name: null,
+          createdAt: new Date(),
+        };
+        mockCreateRecipient.mockResolvedValue(createdRecipient);
+
+        const { req, res, statusMock } = createMockReqRes({
+          body: { email: 'test@example.com', name: '' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(mockCreateRecipient).toHaveBeenCalledWith('test-user-id-123', 'test@example.com', undefined);
+        expect(statusMock).toHaveBeenCalledWith(201);
+      });
+
+      it('should treat whitespace-only name as undefined', async () => {
+        mockRecipientEmailExists.mockResolvedValue(false);
+        const createdRecipient = {
+          id: 'new-recipient-id',
+          userId: 'test-user-id-123',
+          email: 'test@example.com',
+          name: null,
+          createdAt: new Date(),
+        };
+        mockCreateRecipient.mockResolvedValue(createdRecipient);
+
+        const { req, res, statusMock } = createMockReqRes({
+          body: { email: 'test@example.com', name: '   ' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(mockCreateRecipient).toHaveBeenCalledWith('test-user-id-123', 'test@example.com', undefined);
+        expect(statusMock).toHaveBeenCalledWith(201);
+      });
+
+      it('should not include userId or createdAt in response', async () => {
+        mockRecipientEmailExists.mockResolvedValue(false);
+        const createdRecipient = {
+          id: 'new-recipient-id',
+          userId: 'test-user-id-123',
+          email: 'test@example.com',
+          name: 'Test User',
+          createdAt: new Date('2026-01-26'),
+        };
+        mockCreateRecipient.mockResolvedValue(createdRecipient);
+
+        const { req, res, jsonMock } = createMockReqRes({
+          body: { email: 'test@example.com', name: 'Test User' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.recipient).not.toHaveProperty('userId');
+        expect(response.recipient).not.toHaveProperty('createdAt');
+        expect(response.recipient).toEqual({
+          id: 'new-recipient-id',
+          email: 'test@example.com',
+          name: 'Test User',
+        });
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should return 500 on recipientEmailExists error', async () => {
+        mockRecipientEmailExists.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 'test@example.com' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+
+      it('should return 500 on createRecipient error', async () => {
+        mockRecipientEmailExists.mockResolvedValue(false);
+        mockCreateRecipient.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { email: 'test@example.com' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+    });
+
+    describe('User ID from authenticated user', () => {
+      it('should use authenticated user ID for creation', async () => {
+        const differentIdUser = createMockUser({
+          id: 'different-user-id-456',
+        });
+        mockGetAuthenticatedUser.mockReturnValue(differentIdUser);
+        mockRecipientEmailExists.mockResolvedValue(false);
+        const createdRecipient = {
+          id: 'new-recipient-id',
+          userId: 'different-user-id-456',
+          email: 'test@example.com',
+          name: null,
+          createdAt: new Date(),
+        };
+        mockCreateRecipient.mockResolvedValue(createdRecipient);
+
+        const { req, res, statusMock } = createMockReqRes({
+          body: { email: 'test@example.com' },
+        });
+
+        await addRecipientHandler(req, res);
+
+        expect(mockRecipientEmailExists).toHaveBeenCalledWith('different-user-id-456', 'test@example.com');
+        expect(mockCreateRecipient).toHaveBeenCalledWith('different-user-id-456', 'test@example.com', undefined);
+        expect(statusMock).toHaveBeenCalledWith(201);
       });
     });
   });

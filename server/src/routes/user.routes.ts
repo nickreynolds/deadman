@@ -6,7 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, getAuthenticatedUser } from '../auth';
 import { findUserById, updateUser } from '../services/user.service';
-import { getRecipientsByUserId } from '../services/recipient.service';
+import { getRecipientsByUserId, createRecipient, recipientEmailExists } from '../services/recipient.service';
 import { createChildLogger } from '../logger';
 
 const logger = createChildLogger({ component: 'user-routes' });
@@ -179,6 +179,85 @@ router.get('/recipients', requireAuth, async (req: Request, res: Response): Prom
     });
   } catch (error) {
     logger.error({ err: error }, 'Error fetching user recipients');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/user/recipients
+ * Add a new distribution recipient
+ *
+ * Request body:
+ *   - email: string (required) - Recipient's email address
+ *   - name: string (optional) - Recipient's name
+ *
+ * Response:
+ *   - 201: { recipient: { id, email, name } }
+ *   - 400: { error: string } - Invalid request body
+ *   - 401: { error: string } - Not authenticated
+ *   - 409: { error: string } - Email already exists for this user
+ *   - 500: { error: string } - Server error
+ */
+router.post('/recipients', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authUser = getAuthenticatedUser(req);
+    const { email, name } = req.body;
+
+    // Validate email - required
+    if (email === undefined || email === null) {
+      res.status(400).json({ error: 'email is required' });
+      return;
+    }
+
+    if (typeof email !== 'string') {
+      res.status(400).json({ error: 'email must be a string' });
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+    if (trimmedEmail === '') {
+      res.status(400).json({ error: 'email cannot be empty' });
+      return;
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      res.status(400).json({ error: 'Invalid email format' });
+      return;
+    }
+
+    // Validate name if provided
+    if (name !== undefined && name !== null) {
+      if (typeof name !== 'string') {
+        res.status(400).json({ error: 'name must be a string' });
+        return;
+      }
+    }
+
+    // Check for duplicate email (case-insensitive)
+    const emailExists = await recipientEmailExists(authUser.id, trimmedEmail);
+    if (emailExists) {
+      logger.warn({ userId: authUser.id, email: trimmedEmail }, 'Duplicate recipient email');
+      res.status(409).json({ error: 'A recipient with this email already exists' });
+      return;
+    }
+
+    // Create the recipient
+    const trimmedName = name?.trim() || undefined;
+    const recipient = await createRecipient(authUser.id, trimmedEmail, trimmedName);
+
+    logger.info({ userId: authUser.id, recipientId: recipient.id }, 'Recipient created');
+
+    res.status(201).json({
+      recipient: {
+        id: recipient.id,
+        email: recipient.email,
+        name: recipient.name,
+      },
+    });
+  } catch (error) {
+    logger.error({ err: error }, 'Error creating recipient');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
