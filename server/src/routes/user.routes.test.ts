@@ -33,11 +33,15 @@ jest.mock('../services/user.service', () => ({
 const mockGetRecipientsByUserId = jest.fn();
 const mockCreateRecipient = jest.fn();
 const mockRecipientEmailExists = jest.fn();
+const mockFindRecipientById = jest.fn();
+const mockDeleteRecipient = jest.fn();
 
 jest.mock('../services/recipient.service', () => ({
   getRecipientsByUserId: (...args: unknown[]) => mockGetRecipientsByUserId(...args),
   createRecipient: (...args: unknown[]) => mockCreateRecipient(...args),
   recipientEmailExists: (...args: unknown[]) => mockRecipientEmailExists(...args),
+  findRecipientById: (...args: unknown[]) => mockFindRecipientById(...args),
+  deleteRecipient: (...args: unknown[]) => mockDeleteRecipient(...args),
 }));
 
 // Mock authentication middleware
@@ -1165,6 +1169,215 @@ describe('User Routes', () => {
         expect(mockRecipientEmailExists).toHaveBeenCalledWith('different-user-id-456', 'test@example.com');
         expect(mockCreateRecipient).toHaveBeenCalledWith('different-user-id-456', 'test@example.com', undefined);
         expect(statusMock).toHaveBeenCalledWith(201);
+      });
+    });
+  });
+
+  describe('DELETE /recipients/:id', () => {
+    const handlers = getRouteStack('delete', '/recipients/:id');
+    const authMiddleware = handlers[0]!; // requireAuth
+    const deleteRecipientHandler = handlers[1]!; // main handler
+
+    describe('Authentication', () => {
+      it('should require authentication', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes({
+          params: { id: 'recipient-123' },
+        });
+
+        mockRequireAuth.mockImplementation((req, res, next) => {
+          res.status(401).json({ error: 'Unauthorized' });
+          // Don't call next() to simulate blocked request
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(401);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should proceed when authenticated', async () => {
+        const { req, res, nextMock } = createMockReqRes({
+          params: { id: 'recipient-123' },
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(nextMock).toHaveBeenCalled();
+      });
+    });
+
+    describe('Recipient lookup', () => {
+      it('should return 404 when recipient not found', async () => {
+        mockFindRecipientById.mockResolvedValue(null);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'non-existent-id' },
+        });
+
+        await deleteRecipientHandler(req, res);
+
+        expect(mockFindRecipientById).toHaveBeenCalledWith('non-existent-id');
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Recipient not found' });
+        expect(mockDeleteRecipient).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Ownership validation', () => {
+      it('should return 403 when recipient belongs to another user', async () => {
+        const otherUsersRecipient = {
+          id: 'recipient-123',
+          userId: 'other-user-id',
+          email: 'test@example.com',
+          name: 'Test User',
+          createdAt: new Date(),
+        };
+        mockFindRecipientById.mockResolvedValue(otherUsersRecipient);
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'recipient-123' },
+        });
+
+        await deleteRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(403);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'You do not have permission to delete this recipient' });
+        expect(mockDeleteRecipient).not.toHaveBeenCalled();
+      });
+
+      it('should allow deletion of own recipient', async () => {
+        const ownRecipient = {
+          id: 'recipient-123',
+          userId: 'test-user-id-123',
+          email: 'test@example.com',
+          name: 'Test User',
+          createdAt: new Date(),
+        };
+        mockFindRecipientById.mockResolvedValue(ownRecipient);
+        mockDeleteRecipient.mockResolvedValue(true);
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          params: { id: 'recipient-123' },
+        });
+
+        await deleteRecipientHandler(req, res);
+
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(mockDeleteRecipient).toHaveBeenCalledWith('recipient-123');
+        expect(jsonMock).toHaveBeenCalledWith({ success: true });
+      });
+    });
+
+    describe('Successful deletion', () => {
+      it('should delete recipient and return success', async () => {
+        const ownRecipient = {
+          id: 'recipient-456',
+          userId: 'test-user-id-123',
+          email: 'john@example.com',
+          name: 'John Doe',
+          createdAt: new Date(),
+        };
+        mockFindRecipientById.mockResolvedValue(ownRecipient);
+        mockDeleteRecipient.mockResolvedValue(true);
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          params: { id: 'recipient-456' },
+        });
+
+        await deleteRecipientHandler(req, res);
+
+        expect(mockFindRecipientById).toHaveBeenCalledWith('recipient-456');
+        expect(mockDeleteRecipient).toHaveBeenCalledWith('recipient-456');
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({ success: true });
+      });
+
+      it('should handle race condition when recipient deleted between find and delete', async () => {
+        const ownRecipient = {
+          id: 'recipient-789',
+          userId: 'test-user-id-123',
+          email: 'test@example.com',
+          name: null,
+          createdAt: new Date(),
+        };
+        mockFindRecipientById.mockResolvedValue(ownRecipient);
+        mockDeleteRecipient.mockResolvedValue(false); // Recipient was deleted by another request
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'recipient-789' },
+        });
+
+        await deleteRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Recipient not found' });
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should return 500 on findRecipientById error', async () => {
+        mockFindRecipientById.mockRejectedValue(new Error('Database connection failed'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'recipient-123' },
+        });
+
+        await deleteRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+
+      it('should return 500 on deleteRecipient error', async () => {
+        const ownRecipient = {
+          id: 'recipient-123',
+          userId: 'test-user-id-123',
+          email: 'test@example.com',
+          name: 'Test',
+          createdAt: new Date(),
+        };
+        mockFindRecipientById.mockResolvedValue(ownRecipient);
+        mockDeleteRecipient.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          params: { id: 'recipient-123' },
+        });
+
+        await deleteRecipientHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+    });
+
+    describe('User ID from authenticated user', () => {
+      it('should use authenticated user ID for ownership check', async () => {
+        const differentIdUser = createMockUser({
+          id: 'different-user-id-999',
+        });
+        mockGetAuthenticatedUser.mockReturnValue(differentIdUser);
+
+        const recipientBelongingToDifferentUser = {
+          id: 'recipient-123',
+          userId: 'different-user-id-999',
+          email: 'test@example.com',
+          name: null,
+          createdAt: new Date(),
+        };
+        mockFindRecipientById.mockResolvedValue(recipientBelongingToDifferentUser);
+        mockDeleteRecipient.mockResolvedValue(true);
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          params: { id: 'recipient-123' },
+        });
+
+        await deleteRecipientHandler(req, res);
+
+        expect(mockFindRecipientById).toHaveBeenCalledWith('recipient-123');
+        expect(mockDeleteRecipient).toHaveBeenCalledWith('recipient-123');
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({ success: true });
       });
     });
   });

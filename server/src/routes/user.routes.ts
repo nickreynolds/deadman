@@ -6,7 +6,13 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, getAuthenticatedUser } from '../auth';
 import { findUserById, updateUser } from '../services/user.service';
-import { getRecipientsByUserId, createRecipient, recipientEmailExists } from '../services/recipient.service';
+import {
+  getRecipientsByUserId,
+  createRecipient,
+  recipientEmailExists,
+  findRecipientById,
+  deleteRecipient,
+} from '../services/recipient.service';
 import { createChildLogger } from '../logger';
 
 const logger = createChildLogger({ component: 'user-routes' });
@@ -258,6 +264,60 @@ router.post('/recipients', requireAuth, async (req: Request, res: Response): Pro
     });
   } catch (error) {
     logger.error({ err: error }, 'Error creating recipient');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /api/user/recipients/:id
+ * Remove a distribution recipient
+ *
+ * Path parameters:
+ *   - id: string - Recipient ID to delete
+ *
+ * Response:
+ *   - 200: { success: true }
+ *   - 401: { error: string } - Not authenticated
+ *   - 403: { error: string } - Recipient belongs to another user
+ *   - 404: { error: string } - Recipient not found
+ *   - 500: { error: string } - Server error
+ */
+router.delete('/recipients/:id', requireAuth, async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+  try {
+    const authUser = getAuthenticatedUser(req);
+    const { id: recipientId } = req.params;
+
+    // Find the recipient to check ownership
+    const recipient = await findRecipientById(recipientId);
+
+    if (!recipient) {
+      logger.warn({ recipientId }, 'Recipient not found for deletion');
+      res.status(404).json({ error: 'Recipient not found' });
+      return;
+    }
+
+    // Verify ownership
+    if (recipient.userId !== authUser.id) {
+      logger.warn({ recipientId, userId: authUser.id, ownerId: recipient.userId }, 'Unauthorized recipient deletion attempt');
+      res.status(403).json({ error: 'You do not have permission to delete this recipient' });
+      return;
+    }
+
+    // Delete the recipient
+    const deleted = await deleteRecipient(recipientId);
+
+    if (!deleted) {
+      // Race condition: recipient was deleted between find and delete
+      logger.warn({ recipientId }, 'Recipient not found during deletion (race condition)');
+      res.status(404).json({ error: 'Recipient not found' });
+      return;
+    }
+
+    logger.info({ userId: authUser.id, recipientId }, 'Recipient deleted');
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error({ err: error }, 'Error deleting recipient');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

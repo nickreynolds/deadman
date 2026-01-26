@@ -910,5 +910,39 @@
 - Total: 453 tests, all passing (23 new tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (453 tests)
 
+### Task 47: Implement delete recipient endpoint (2026-01-26)
+- Created DELETE /api/user/recipients/:id endpoint in src/routes/user.routes.ts:
+  - Requires authentication via requireAuth middleware
+  - Looks up recipient by ID using findRecipientById()
+  - Returns 404 if recipient not found
+  - Validates ownership: returns 403 if recipient belongs to another user
+  - Deletes recipient using deleteRecipient() from recipient service
+  - Handles race condition where recipient deleted between find and delete (404)
+  - Returns { success: true } on successful deletion
+  - Returns 500 on database errors
+- Added imports for findRecipientById and deleteRecipient to user routes
+- Created comprehensive unit tests in src/routes/user.routes.test.ts (10 new tests):
+  - Authentication tests (requires auth, proceeds when authenticated)
+  - Recipient lookup tests (404 for non-existent recipient)
+  - Ownership validation tests (403 for other user's recipient, allows own recipient)
+  - Successful deletion tests (delete and return success, race condition handling)
+  - Error handling tests (500 on findRecipientById error, 500 on deleteRecipient error)
+  - User ID from authenticated user test
+- Total: 463 tests, all passing (10 new tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (463 tests)
+
+### Task 48: Validate recipient ownership (2026-01-26)
+- Task implemented as part of Task 47 (delete recipient endpoint)
+- Implementation in src/routes/user.routes.ts:
+  - GET /api/user/recipients: Implicitly secure - uses getRecipientsByUserId(authUser.id) which filters by authenticated user
+  - POST /api/user/recipients: Implicitly secure - creates recipient with authUser.id as owner
+  - DELETE /api/user/recipients/:id: Explicitly validates ownership (lines 290-295)
+    - Checks recipient.userId !== authUser.id
+    - Returns 403 with "You do not have permission to delete this recipient"
+    - Logs unauthorized deletion attempts for security auditing
+- Comprehensive tests verify 403 responses for unauthorized access
+- No additional code changes required - marked as FINISHED
+- Verified: pnpm run build compiles successfully, pnpm test passes (463 tests)
+
 ## Next Task
-Task 47: Implement delete recipient endpoint
+Task 49: Write settings and recipients unit tests

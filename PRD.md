@@ -929,7 +929,7 @@ Each task includes:
   - Recipient is removed successfully
   - Non-existent recipient returns 404
   - Returns success confirmation
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 48: Validate recipient ownership**
 - **Category:** Security
@@ -938,7 +938,7 @@ Each task includes:
   - Users cannot view other users' recipients
   - Users cannot delete other users' recipients
   - 403 returned for unauthorized access
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 49: Write settings and recipients unit tests**
 - **Category:** Testing
