@@ -1015,7 +1015,7 @@ Each task includes:
   - Script creates admin user with configured credentials
   - Script is idempotent (safe to run multiple times)
   - Script can be run via pnpm script
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 57: Write admin endpoint integration tests**
 - **Category:** Testing

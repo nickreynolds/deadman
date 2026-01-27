@@ -1032,5 +1032,27 @@
 - Total: 547 tests, all passing (20 new tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (547 tests)
 
+### Task 56: Create admin seed script (2026-01-27)
+- Created src/scripts/seed-admin.ts with comprehensive admin seeding functionality:
+  - Loads environment variables from .env file
+  - ADMIN_USERNAME: Optional, defaults to "admin"
+  - ADMIN_PASSWORD: Required, must be at least 8 characters
+  - Uses bcrypt with 12 rounds for password hashing
+  - Creates admin user with 1GB default storage quota
+- Script is idempotent (safe to run multiple times):
+  - Checks if user with username already exists
+  - If admin exists, logs message and skips creation
+  - If non-admin user exists, provides guidance on how to make admin
+  - Only creates new user if none exists
+- Added "seed:admin" pnpm script in package.json:
+  - Runs via: pnpm seed:admin
+  - Or with inline password: ADMIN_PASSWORD=your-password pnpm seed:admin
+- Updated .env.example with ADMIN_USERNAME and ADMIN_PASSWORD documentation
+- Script outputs:
+  - User ID, username, admin status, storage quota on success
+  - Clear error messages with usage instructions on failure
+  - Proper exit codes (0 for success, 1 for error)
+- Verified: pnpm run build compiles successfully, pnpm test passes (547 tests)
+
 ## Next Task
-Task 56: Create admin seed script
+Task 57: Write admin endpoint integration tests
