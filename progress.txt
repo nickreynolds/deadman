@@ -1143,5 +1143,41 @@
 - Total: 602 tests, all passing (21 new distribution job tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (602 tests)
 
+### Task 60: Create push notification job (2026-01-27)
+- Created src/services/notification.service.ts with notification service:
+  - CheckInReminderPayload interface: FCM token, user ID, video ID, title, time until distribution
+  - NotificationResult interface: success/failure tracking
+  - sendCheckInReminder(): Sends single notification (placeholder for Firebase)
+  - sendCheckInReminders(): Batch send notifications
+  - formatTimeUntilDistribution(): Formats time for display (e.g., "2 days", "5 hours")
+  - isFirebaseConfigured(): Placeholder for Task 64 Firebase integration
+- Created src/jobs/notification.job.ts with push notification job:
+  - NotificationJobResult interface: tracks videos found, notifications sent/skipped/failed
+  - processNotifications(): Queries all ACTIVE videos with user FCM tokens
+    - Skips users without FCM tokens
+    - Sends check-in reminder for each active video
+    - Logs results for monitoring
+  - notificationJobHandler(): Entry point for scheduler
+- Updated src/jobs/index.ts:
+  - Added JobNames.PUSH_NOTIFICATIONS constant
+  - Registered notification job with DAILY_9AM cron (0 9 * * *)
+  - runOnStart: false to avoid unexpected notifications on startup
+- Created comprehensive unit tests (src/services/notification.service.test.ts):
+  - Tests for sendCheckInReminder(): valid payload, empty token, null token
+  - Tests for sendCheckInReminders(): multiple notifications, mixed success/failure, empty array
+  - Tests for formatTimeUntilDistribution(): days, hours, minutes, edge cases
+  - Tests for isFirebaseConfigured(): returns false (placeholder)
+- Created comprehensive unit tests (src/jobs/notification.job.test.ts):
+  - Tests for processNotifications(): empty videos, query parameters, FCM token handling
+  - Tests for single/multiple notifications, skipped notifications (no token)
+  - Tests for error handling: send failure, thrown errors, database errors
+  - Tests for notificationJobHandler(): success, partial failure, critical error
+- Updated src/jobs/index.test.ts:
+  - Added tests for PUSH_NOTIFICATIONS job name
+  - Added tests for notification job registration with daily 9am cron
+  - Added tests for runOnStart disabled
+- Total: 641 tests, all passing (39 new tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (641 tests)
+
 ## Next Task
-Task 60: Create push notification job
+Task 61: Create expiration cleanup job

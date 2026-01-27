@@ -10,8 +10,15 @@ export {
   type DistributionJobResult,
 } from './distribution.job';
 
+export {
+  processNotifications,
+  notificationJobHandler,
+  type NotificationJobResult,
+} from './notification.job';
+
 import { getScheduler, CronExpressions } from '../scheduler';
 import { distributionJobHandler } from './distribution.job';
+import { notificationJobHandler } from './notification.job';
 import { createChildLogger } from '../logger';
 
 const logger = createChildLogger({ component: 'jobs' });
@@ -21,8 +28,8 @@ const logger = createChildLogger({ component: 'jobs' });
  */
 export const JobNames = {
   DISTRIBUTION: 'distribution',
+  PUSH_NOTIFICATIONS: 'push-notifications',
   // Future jobs:
-  // PUSH_NOTIFICATIONS: 'push-notifications',
   // EXPIRATION_CLEANUP: 'expiration-cleanup',
 } as const;
 
@@ -39,6 +46,15 @@ export function registerAllJobs(): void {
     cronExpression: CronExpressions.HOURLY,
     handler: distributionJobHandler,
     runOnStart: false, // Don't run immediately on startup to avoid unexpected distributions
+  });
+
+  // Push notification job - runs daily at 9 AM UTC
+  // This sends check-in reminders for all active videos
+  scheduler.registerJob({
+    name: JobNames.PUSH_NOTIFICATIONS,
+    cronExpression: CronExpressions.DAILY_9AM,
+    handler: notificationJobHandler,
+    runOnStart: false, // Don't run immediately on startup
   });
 
   logger.info('All background jobs registered');

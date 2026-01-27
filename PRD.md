@@ -1056,7 +1056,7 @@ Each task includes:
   - Notifications sent for all ACTIVE videos
   - Each user receives one notification per video
   - Job logs notification results
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 61: Create expiration cleanup job**
 - **Category:** Background Jobs

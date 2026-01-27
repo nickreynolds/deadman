@@ -42,6 +42,11 @@ jest.mock('./distribution.job', () => ({
   distributionJobHandler: jest.fn(),
 }));
 
+// Mock the notification job handler
+jest.mock('./notification.job', () => ({
+  notificationJobHandler: jest.fn(),
+}));
+
 import { registerAllJobs, JobNames } from './index';
 import { getScheduler, resetScheduler } from '../scheduler';
 
@@ -59,6 +64,10 @@ describe('Jobs Module', () => {
     it('should export DISTRIBUTION job name', () => {
       expect(JobNames.DISTRIBUTION).toBe('distribution');
     });
+
+    it('should export PUSH_NOTIFICATIONS job name', () => {
+      expect(JobNames.PUSH_NOTIFICATIONS).toBe('push-notifications');
+    });
   });
 
   describe('registerAllJobs', () => {
@@ -67,6 +76,13 @@ describe('Jobs Module', () => {
 
       const scheduler = getScheduler();
       expect(scheduler.hasJob(JobNames.DISTRIBUTION)).toBe(true);
+    });
+
+    it('should register the push notifications job', () => {
+      registerAllJobs();
+
+      const scheduler = getScheduler();
+      expect(scheduler.hasJob(JobNames.PUSH_NOTIFICATIONS)).toBe(true);
     });
 
     it('should register distribution job with hourly cron expression', () => {
@@ -78,6 +94,17 @@ describe('Jobs Module', () => {
 
       expect(distributionJob).toBeDefined();
       expect(distributionJob?.cronExpression).toBe('0 * * * *'); // HOURLY
+    });
+
+    it('should register push notifications job with daily 9am cron expression', () => {
+      registerAllJobs();
+
+      const scheduler = getScheduler();
+      const status = scheduler.getStatus();
+      const notificationJob = status.jobs.find((j) => j.name === JobNames.PUSH_NOTIFICATIONS);
+
+      expect(notificationJob).toBeDefined();
+      expect(notificationJob?.cronExpression).toBe('0 9 * * *'); // DAILY_9AM
     });
 
     it('should not run distribution job on start', () => {
@@ -92,10 +119,33 @@ describe('Jobs Module', () => {
       expect(distributionJob?.runCount).toBe(0);
     });
 
+    it('should not run push notifications job on start', () => {
+      registerAllJobs();
+
+      const scheduler = getScheduler();
+      const status = scheduler.getStatus();
+      const notificationJob = status.jobs.find((j) => j.name === JobNames.PUSH_NOTIFICATIONS);
+
+      // Job should be registered but not running
+      expect(notificationJob?.isRunning).toBe(false);
+      expect(notificationJob?.runCount).toBe(0);
+    });
+
     it('should throw if called twice (duplicate job registration)', () => {
       registerAllJobs();
 
       expect(() => registerAllJobs()).toThrow('Job "distribution" is already registered');
+    });
+
+    it('should register both jobs', () => {
+      registerAllJobs();
+
+      const scheduler = getScheduler();
+      const jobNames = scheduler.getJobNames();
+
+      expect(jobNames).toContain(JobNames.DISTRIBUTION);
+      expect(jobNames).toContain(JobNames.PUSH_NOTIFICATIONS);
+      expect(jobNames).toHaveLength(2);
     });
   });
 });
