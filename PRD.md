@@ -997,7 +997,7 @@ Each task includes:
   - Returns all system configuration values
   - Non-admins receive 403
   - Response includes all config keys
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 55: Implement update system config endpoint**
 - **Category:** Admin API

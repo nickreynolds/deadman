@@ -16,6 +16,7 @@ import {
   deleteUser,
   findUserById,
 } from '../services/user.service';
+import { getAllConfig } from '../services/config.service';
 import { createChildLogger } from '../logger';
 
 const logger = createChildLogger({ component: 'admin-routes' });
@@ -327,6 +328,31 @@ router.delete('/users/:id', requireAuth, requireAdmin, async (req: Request<{ id:
     res.json({ success: true });
   } catch (error) {
     logger.error({ err: error }, 'Error deleting user');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/admin/config
+ * Get system configuration (admin only)
+ *
+ * Response:
+ *   - 200: { config: { key: value, ... } }
+ *   - 401: { error: string } - Not authenticated
+ *   - 403: { error: string } - Not an admin
+ *   - 500: { error: string } - Server error
+ */
+router.get('/config', requireAuth, requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminUser = getAuthenticatedUser(req);
+
+    const config = await getAllConfig();
+
+    logger.debug({ adminId: adminUser.id }, 'Admin retrieved system configuration');
+
+    res.json({ config });
+  } catch (error) {
+    logger.error({ err: error }, 'Error retrieving system configuration');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

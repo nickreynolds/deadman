@@ -3,6 +3,7 @@
 // Tests GET /api/admin/users - List users
 // Tests PATCH /api/admin/users/:id - Update user
 // Tests DELETE /api/admin/users/:id - Delete user
+// Tests GET /api/admin/config - Get system configuration
 
 import { Request, Response, NextFunction } from 'express';
 import { mockConfig, createMockUser, createMockAdminUser } from '../test/mocks';
@@ -36,6 +37,13 @@ jest.mock('../services/user.service', () => ({
   updateUser: (...args: unknown[]) => mockUpdateUser(...args),
   deleteUser: (...args: unknown[]) => mockDeleteUser(...args),
   findUserById: (...args: unknown[]) => mockFindUserById(...args),
+}));
+
+// Mock config service functions
+const mockGetAllConfig = jest.fn();
+
+jest.mock('../services/config.service', () => ({
+  getAllConfig: (...args: unknown[]) => mockGetAllConfig(...args),
 }));
 
 // Mock authentication middleware
@@ -943,6 +951,127 @@ describe('Admin Routes', () => {
         });
 
         await deleteUserHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+    });
+  });
+
+  describe('GET /config', () => {
+    const handlers = getRouteStack('get', '/config');
+    const authMiddleware = handlers[0]!;
+    const adminMiddleware = handlers[1]!;
+    const getConfigHandler = handlers[2]!;
+
+    describe('Authentication and Authorization', () => {
+      it('should require authentication', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes();
+
+        mockRequireAuth.mockImplementation((req, res, next) => {
+          res.status(401).json({ error: 'Unauthorized' });
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(401);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should require admin privileges', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes();
+
+        mockRequireAdmin.mockImplementation((req, res, next) => {
+          res.status(403).json({ error: 'Forbidden', message: 'Admin privileges required' });
+        });
+
+        await adminMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(403);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Forbidden', message: 'Admin privileges required' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should proceed when authenticated as admin', async () => {
+        const { req, res, nextMock } = createMockReqRes();
+
+        await authMiddleware(req, res, nextMock);
+        expect(nextMock).toHaveBeenCalled();
+
+        nextMock.mockClear();
+        await adminMiddleware(req, res, nextMock);
+        expect(nextMock).toHaveBeenCalled();
+      });
+    });
+
+    describe('Retrieving configuration', () => {
+      it('should return all configuration values', async () => {
+        mockGetAllConfig.mockResolvedValue({
+          default_storage_quota_bytes: '1073741824',
+          notification_time_utc: '09:00',
+          video_expiration_days: '7',
+          distribution_check_interval_minutes: '60',
+        });
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes();
+
+        await getConfigHandler(req, res);
+
+        expect(mockGetAllConfig).toHaveBeenCalled();
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({
+          config: {
+            default_storage_quota_bytes: '1073741824',
+            notification_time_utc: '09:00',
+            video_expiration_days: '7',
+            distribution_check_interval_minutes: '60',
+          },
+        });
+      });
+
+      it('should return merged defaults and stored values', async () => {
+        mockGetAllConfig.mockResolvedValue({
+          default_storage_quota_bytes: '5368709120', // Custom value
+          notification_time_utc: '10:30', // Custom value
+          video_expiration_days: '7', // Default
+          distribution_check_interval_minutes: '60', // Default
+          custom_key: 'custom_value', // Additional key
+        });
+
+        const { req, res, jsonMock } = createMockReqRes();
+
+        await getConfigHandler(req, res);
+
+        expect(jsonMock).toHaveBeenCalledWith({
+          config: {
+            default_storage_quota_bytes: '5368709120',
+            notification_time_utc: '10:30',
+            video_expiration_days: '7',
+            distribution_check_interval_minutes: '60',
+            custom_key: 'custom_value',
+          },
+        });
+      });
+
+      it('should return empty config object when no values', async () => {
+        mockGetAllConfig.mockResolvedValue({});
+
+        const { req, res, jsonMock } = createMockReqRes();
+
+        await getConfigHandler(req, res);
+
+        expect(jsonMock).toHaveBeenCalledWith({ config: {} });
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should return 500 on database error', async () => {
+        mockGetAllConfig.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes();
+
+        await getConfigHandler(req, res);
 
         expect(statusMock).toHaveBeenCalledWith(500);
         expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });

@@ -984,5 +984,30 @@
 - Total: 509 tests, all passing (46 new admin routes tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (509 tests)
 
+### Task 54: Implement get system config endpoint (2026-01-27)
+- Created src/services/config.service.ts with system configuration management:
+  - DEFAULT_CONFIG: Default values for storage quota, notification time, expiration days, check interval
+  - getConfigValue(): Get single config value with default fallback
+  - getAllConfig(): Get all config values (merged defaults with stored values)
+  - setConfigValue(): Upsert single config value
+  - setConfigValues(): Update multiple values in a transaction
+  - deleteConfigValue(): Delete a config value
+- Created GET /api/admin/config endpoint in src/routes/admin.routes.ts:
+  - Requires authentication and admin privileges
+  - Returns all system configuration values as { config: { key: value, ... } }
+  - Merges default values with stored database values
+  - Returns 401 for unauthenticated requests
+  - Returns 403 for non-admin users
+  - Returns 500 on database errors
+- Created comprehensive unit tests (src/services/config.service.test.ts):
+  - Tests for getConfigValue(), getAllConfig(), setConfigValue(), setConfigValues(), deleteConfigValue()
+  - Tests for default value handling and error cases
+- Added tests for GET /config endpoint in src/routes/admin.routes.test.ts:
+  - Authentication and authorization tests
+  - Config retrieval tests (all values, merged values, empty config)
+  - Error handling tests
+- Total: 527 tests, all passing (18 new tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (527 tests)
+
 ## Next Task
-Task 54: Implement get system config endpoint
+Task 55: Implement update system config endpoint
