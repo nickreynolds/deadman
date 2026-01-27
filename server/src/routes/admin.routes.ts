@@ -16,7 +16,7 @@ import {
   deleteUser,
   findUserById,
 } from '../services/user.service';
-import { getAllConfig } from '../services/config.service';
+import { getAllConfig, setConfigValues } from '../services/config.service';
 import { createChildLogger } from '../logger';
 
 const logger = createChildLogger({ component: 'admin-routes' });
@@ -353,6 +353,77 @@ router.get('/config', requireAuth, requireAdmin, async (req: Request, res: Respo
     res.json({ config });
   } catch (error) {
     logger.error({ err: error }, 'Error retrieving system configuration');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * PATCH /api/admin/config
+ * Update system configuration (admin only)
+ *
+ * Request body:
+ *   - { key: value, ... } - Arbitrary config key-value pairs (all values must be strings)
+ *
+ * Response:
+ *   - 200: { config: { key: value, ... } } - Updated configuration
+ *   - 400: { error: string } - Invalid request body
+ *   - 401: { error: string } - Not authenticated
+ *   - 403: { error: string } - Not an admin
+ *   - 500: { error: string } - Server error
+ */
+router.patch('/config', requireAuth, requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminUser = getAuthenticatedUser(req);
+    const body = req.body;
+
+    // Validate that body is an object
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+      res.status(400).json({ error: 'Request body must be an object' });
+      return;
+    }
+
+    // Validate that all values are strings
+    const entries = Object.entries(body);
+    const configValues: Record<string, string> = {};
+
+    for (const [key, value] of entries) {
+      // Skip keys with undefined or null values (treat as no-op for that key)
+      if (value === undefined || value === null) {
+        continue;
+      }
+
+      if (typeof value !== 'string') {
+        res.status(400).json({ error: `Config value for '${key}' must be a string` });
+        return;
+      }
+
+      // Skip empty keys
+      if (key.trim() === '') {
+        continue;
+      }
+
+      configValues[key] = value;
+    }
+
+    // If no valid values to update, just return current config
+    if (Object.keys(configValues).length === 0) {
+      const config = await getAllConfig();
+      logger.debug({ adminId: adminUser.id }, 'Admin requested config update with no valid values');
+      res.json({ config });
+      return;
+    }
+
+    // Update configuration values
+    await setConfigValues(configValues);
+
+    logger.info({ adminId: adminUser.id, keys: Object.keys(configValues) }, 'Admin updated system configuration');
+
+    // Return updated configuration
+    const updatedConfig = await getAllConfig();
+
+    res.json({ config: updatedConfig });
+  } catch (error) {
+    logger.error({ err: error }, 'Error updating system configuration');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

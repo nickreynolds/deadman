@@ -4,6 +4,7 @@
 // Tests PATCH /api/admin/users/:id - Update user
 // Tests DELETE /api/admin/users/:id - Delete user
 // Tests GET /api/admin/config - Get system configuration
+// Tests PATCH /api/admin/config - Update system configuration
 
 import { Request, Response, NextFunction } from 'express';
 import { mockConfig, createMockUser, createMockAdminUser } from '../test/mocks';
@@ -41,9 +42,11 @@ jest.mock('../services/user.service', () => ({
 
 // Mock config service functions
 const mockGetAllConfig = jest.fn();
+const mockSetConfigValues = jest.fn();
 
 jest.mock('../services/config.service', () => ({
   getAllConfig: (...args: unknown[]) => mockGetAllConfig(...args),
+  setConfigValues: (...args: unknown[]) => mockSetConfigValues(...args),
 }));
 
 // Mock authentication middleware
@@ -1072,6 +1075,355 @@ describe('Admin Routes', () => {
         const { req, res, statusMock, jsonMock } = createMockReqRes();
 
         await getConfigHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+    });
+  });
+
+  describe('PATCH /config', () => {
+    const handlers = getRouteStack('patch', '/config');
+    const authMiddleware = handlers[0]!;
+    const adminMiddleware = handlers[1]!;
+    const updateConfigHandler = handlers[2]!;
+
+    describe('Authentication and Authorization', () => {
+      it('should require authentication', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes();
+
+        mockRequireAuth.mockImplementation((req, res, next) => {
+          res.status(401).json({ error: 'Unauthorized' });
+        });
+
+        await authMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(401);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should require admin privileges', async () => {
+        const { req, res, statusMock, jsonMock, nextMock } = createMockReqRes();
+
+        mockRequireAdmin.mockImplementation((req, res, next) => {
+          res.status(403).json({ error: 'Forbidden', message: 'Admin privileges required' });
+        });
+
+        await adminMiddleware(req, res, nextMock);
+
+        expect(statusMock).toHaveBeenCalledWith(403);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Forbidden', message: 'Admin privileges required' });
+        expect(nextMock).not.toHaveBeenCalled();
+      });
+
+      it('should proceed when authenticated as admin', async () => {
+        const { req, res, nextMock } = createMockReqRes();
+
+        await authMiddleware(req, res, nextMock);
+        expect(nextMock).toHaveBeenCalled();
+
+        nextMock.mockClear();
+        await adminMiddleware(req, res, nextMock);
+        expect(nextMock).toHaveBeenCalled();
+      });
+    });
+
+    describe('Request validation', () => {
+      it('should return 400 when body is not an object', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: 'not an object' as any,
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Request body must be an object' });
+      });
+
+      it('should return 400 when body is an array', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: ['item1', 'item2'] as any,
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Request body must be an object' });
+      });
+
+      it('should return 400 when body is null', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes();
+        // Explicitly set body to null after creation to bypass the default
+        (req as any).body = null;
+
+        await updateConfigHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Request body must be an object' });
+      });
+
+      it('should return 400 when a config value is not a string', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { notification_time_utc: 900 },
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: "Config value for 'notification_time_utc' must be a string" });
+      });
+
+      it('should return 400 when a config value is a boolean', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { some_flag: true },
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: "Config value for 'some_flag' must be a string" });
+      });
+
+      it('should return 400 when a config value is an object', async () => {
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { nested: { key: 'value' } },
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({ error: "Config value for 'nested' must be a string" });
+      });
+    });
+
+    describe('Empty or no-op updates', () => {
+      it('should return current config when body is empty object', async () => {
+        mockGetAllConfig.mockResolvedValue({
+          default_storage_quota_bytes: '1073741824',
+          notification_time_utc: '09:00',
+        });
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          body: {},
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(mockSetConfigValues).not.toHaveBeenCalled();
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({
+          config: {
+            default_storage_quota_bytes: '1073741824',
+            notification_time_utc: '09:00',
+          },
+        });
+      });
+
+      it('should skip null values and return current config', async () => {
+        mockGetAllConfig.mockResolvedValue({
+          default_storage_quota_bytes: '1073741824',
+          notification_time_utc: '09:00',
+        });
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          body: { notification_time_utc: null },
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(mockSetConfigValues).not.toHaveBeenCalled();
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({
+          config: {
+            default_storage_quota_bytes: '1073741824',
+            notification_time_utc: '09:00',
+          },
+        });
+      });
+
+      it('should skip undefined values', async () => {
+        mockGetAllConfig.mockResolvedValue({
+          default_storage_quota_bytes: '1073741824',
+        });
+
+        const { req, res, jsonMock } = createMockReqRes({
+          body: { some_key: undefined },
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(mockSetConfigValues).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({
+          config: { default_storage_quota_bytes: '1073741824' },
+        });
+      });
+
+      it('should skip empty string keys', async () => {
+        mockSetConfigValues.mockResolvedValue(undefined);
+        mockGetAllConfig.mockResolvedValue({
+          valid_key: 'valid_value',
+        });
+
+        const { req, res, jsonMock } = createMockReqRes({
+          body: { '': 'value', '  ': 'another', valid_key: 'valid_value' },
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(mockSetConfigValues).toHaveBeenCalledWith({ valid_key: 'valid_value' });
+      });
+    });
+
+    describe('Successful updates', () => {
+      it('should update a single config value', async () => {
+        mockSetConfigValues.mockResolvedValue(undefined);
+        mockGetAllConfig.mockResolvedValue({
+          default_storage_quota_bytes: '1073741824',
+          notification_time_utc: '10:30',
+          video_expiration_days: '7',
+          distribution_check_interval_minutes: '60',
+        });
+
+        const { req, res, jsonMock, statusMock } = createMockReqRes({
+          body: { notification_time_utc: '10:30' },
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(mockSetConfigValues).toHaveBeenCalledWith({ notification_time_utc: '10:30' });
+        expect(statusMock).not.toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({
+          config: {
+            default_storage_quota_bytes: '1073741824',
+            notification_time_utc: '10:30',
+            video_expiration_days: '7',
+            distribution_check_interval_minutes: '60',
+          },
+        });
+      });
+
+      it('should update multiple config values', async () => {
+        mockSetConfigValues.mockResolvedValue(undefined);
+        mockGetAllConfig.mockResolvedValue({
+          default_storage_quota_bytes: '5368709120',
+          notification_time_utc: '14:00',
+          video_expiration_days: '7',
+          distribution_check_interval_minutes: '60',
+        });
+
+        const { req, res, jsonMock } = createMockReqRes({
+          body: {
+            default_storage_quota_bytes: '5368709120',
+            notification_time_utc: '14:00',
+          },
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(mockSetConfigValues).toHaveBeenCalledWith({
+          default_storage_quota_bytes: '5368709120',
+          notification_time_utc: '14:00',
+        });
+        expect(jsonMock).toHaveBeenCalledWith({
+          config: {
+            default_storage_quota_bytes: '5368709120',
+            notification_time_utc: '14:00',
+            video_expiration_days: '7',
+            distribution_check_interval_minutes: '60',
+          },
+        });
+      });
+
+      it('should allow adding new custom config keys', async () => {
+        mockSetConfigValues.mockResolvedValue(undefined);
+        mockGetAllConfig.mockResolvedValue({
+          default_storage_quota_bytes: '1073741824',
+          custom_feature_flag: 'enabled',
+        });
+
+        const { req, res, jsonMock } = createMockReqRes({
+          body: { custom_feature_flag: 'enabled' },
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(mockSetConfigValues).toHaveBeenCalledWith({ custom_feature_flag: 'enabled' });
+        expect(jsonMock).toHaveBeenCalledWith({
+          config: {
+            default_storage_quota_bytes: '1073741824',
+            custom_feature_flag: 'enabled',
+          },
+        });
+      });
+
+      it('should return updated config immediately after changes', async () => {
+        mockSetConfigValues.mockResolvedValue(undefined);
+        mockGetAllConfig.mockResolvedValue({
+          notification_time_utc: '12:00',
+        });
+
+        const { req, res, jsonMock } = createMockReqRes({
+          body: { notification_time_utc: '12:00' },
+        });
+
+        await updateConfigHandler(req, res);
+
+        // Verify getAllConfig is called after setConfigValues
+        expect(mockSetConfigValues).toHaveBeenCalled();
+        expect(mockGetAllConfig).toHaveBeenCalled();
+        expect(jsonMock).toHaveBeenCalledWith({
+          config: { notification_time_utc: '12:00' },
+        });
+      });
+
+      it('should handle mixed valid and null/undefined values', async () => {
+        mockSetConfigValues.mockResolvedValue(undefined);
+        mockGetAllConfig.mockResolvedValue({
+          default_storage_quota_bytes: '2147483648',
+          notification_time_utc: '09:00',
+        });
+
+        const { req, res, jsonMock } = createMockReqRes({
+          body: {
+            default_storage_quota_bytes: '2147483648',
+            notification_time_utc: null,
+            video_expiration_days: undefined,
+          },
+        });
+
+        await updateConfigHandler(req, res);
+
+        // Only valid string values should be passed
+        expect(mockSetConfigValues).toHaveBeenCalledWith({
+          default_storage_quota_bytes: '2147483648',
+        });
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should return 500 on setConfigValues error', async () => {
+        mockSetConfigValues.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { notification_time_utc: '10:00' },
+        });
+
+        await updateConfigHandler(req, res);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      });
+
+      it('should return 500 on getAllConfig error after update', async () => {
+        mockSetConfigValues.mockResolvedValue(undefined);
+        mockGetAllConfig.mockRejectedValue(new Error('Database error'));
+
+        const { req, res, statusMock, jsonMock } = createMockReqRes({
+          body: { notification_time_utc: '10:00' },
+        });
+
+        await updateConfigHandler(req, res);
 
         expect(statusMock).toHaveBeenCalledWith(500);
         expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
