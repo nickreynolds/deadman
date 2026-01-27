@@ -10,6 +10,7 @@ import { connectDatabase, disconnectDatabase } from './db';
 import { initializeStorage, StorageError } from './storage';
 import { configurePassport, passport } from './auth';
 import { authRoutes, videoRoutes, publicRoutes, userRoutes, adminRoutes } from './routes';
+import { initializeScheduler, shutdownScheduler } from './scheduler';
 
 // Initialize configuration first - exits if required variables are missing
 const config = initializeConfig();
@@ -73,6 +74,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 // Graceful shutdown handler
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'Shutdown signal received, shutting down gracefully...');
+  shutdownScheduler();
   await disconnectDatabase();
   process.exit(0);
 }
@@ -93,6 +95,11 @@ async function start(): Promise<void> {
 
     // Connect to database
     await connectDatabase();
+
+    // Initialize and start job scheduler
+    const scheduler = initializeScheduler();
+    // Note: Jobs will be registered in future tasks (59-62)
+    scheduler.start();
 
     // Start listening
     const server = app.listen(config.port, () => {

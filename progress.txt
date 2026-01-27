@@ -1068,5 +1068,49 @@
 - No additional code changes required - marked as FINISHED
 - Verified: pnpm run build compiles successfully, pnpm test passes (547 tests)
 
+### Task 58: Set up job scheduler (2026-01-27)
+- Created src/scheduler/index.ts with comprehensive job scheduling functionality:
+  - JobScheduler class: Manages background job scheduling and execution
+  - registerJob(): Register jobs with name, cron expression, and handler function
+  - unregisterJob(): Remove registered jobs by name
+  - start(): Start all registered jobs (with optional runOnStart support)
+  - stop(): Stop all running jobs
+  - runJobNow(): Execute a job immediately (manual trigger)
+  - getStatus(): Get scheduler status including all job states
+  - hasJob(), getJobNames(), clear(): Helper methods
+- Features implemented:
+  - Concurrent execution prevention (skips if job is still running)
+  - Run count and error count tracking per job
+  - Last run timestamp and last error tracking
+  - Timezone support for cron schedules (default: UTC)
+  - runOnStart option for jobs that should run immediately on scheduler start
+  - Comprehensive logging with structured pino logger
+- Singleton pattern with exports:
+  - getScheduler(): Get/create scheduler instance
+  - initializeScheduler(): Initialize for app startup
+  - shutdownScheduler(): Stop and cleanup for app shutdown
+  - resetScheduler(): For testing purposes
+- Common cron expressions exported as CronExpressions:
+  - EVERY_MINUTE, EVERY_5_MINUTES, EVERY_15_MINUTES, EVERY_30_MINUTES
+  - HOURLY, DAILY_MIDNIGHT, DAILY_9AM, DAILY_NOON
+- Updated src/index.ts:
+  - Imported initializeScheduler and shutdownScheduler
+  - Scheduler initialized and started after database connection
+  - Scheduler shut down during graceful shutdown (before database disconnect)
+- Installed @types/node-cron for TypeScript support
+- Created comprehensive unit tests (src/scheduler/index.test.ts):
+  - Tests for getScheduler(), initializeScheduler(), shutdownScheduler(), resetScheduler()
+  - Tests for registerJob(): success, duplicate names, invalid cron, options
+  - Tests for unregisterJob(): success, non-existent
+  - Tests for start(): all jobs, runOnStart, already running
+  - Tests for stop(): all jobs, not started
+  - Tests for runJobNow(): success, not found, already running, handler failure, tracking
+  - Tests for getStatus(): no jobs, with jobs, lastError
+  - Tests for hasJob(), getJobNames(), clear()
+  - Tests for concurrent execution prevention
+  - Tests for CronExpressions values
+- Total: 581 tests, all passing (34 new scheduler tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (581 tests)
+
 ## Next Task
-Task 58: Set up job scheduler
+Task 59: Create distribution job
