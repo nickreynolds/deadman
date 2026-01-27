@@ -1112,5 +1112,36 @@
 - Total: 581 tests, all passing (34 new scheduler tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (581 tests)
 
+### Task 59: Create distribution job (2026-01-27)
+- Created src/jobs/distribution.job.ts with distribution job implementation:
+  - DistributionJobResult interface: tracks processed, distributed, failed counts, and errors
+  - processDistribution(): Main function that queries ACTIVE videos with distribute_at <= now
+    - Updates status to DISTRIBUTED
+    - Sets distributedAt to current time
+    - Sets expiresAt to 7 days after distribution
+    - Handles partial failures gracefully (continues processing other videos)
+    - Returns comprehensive result with success/failure counts
+  - distributionJobHandler(): Entry point for scheduler
+- Created src/jobs/index.ts as jobs module entry point:
+  - Exports job handlers and types
+  - JobNames constant with DISTRIBUTION key
+  - registerAllJobs(): Registers all background jobs with scheduler
+    - Distribution job registered with hourly cron expression (0 * * * *)
+    - runOnStart: false to avoid unexpected distributions on startup
+- Updated src/index.ts:
+  - Import registerAllJobs from jobs module
+  - Call registerAllJobs() after scheduler initialization
+- Created comprehensive unit tests (src/jobs/distribution.job.test.ts):
+  - Tests for processDistribution(): empty results, query parameters, time handling
+  - Tests for single video distribution: success, expires_at calculation
+  - Tests for multiple videos: success, partial failures, all failures
+  - Tests for error handling: findMany failure, non-Error objects
+  - Tests for distributionJobHandler(): success, partial failure, throws on critical error
+- Created unit tests (src/jobs/index.test.ts):
+  - Tests for JobNames export
+  - Tests for registerAllJobs(): job registration, cron expression, runOnStart disabled, duplicate registration
+- Total: 602 tests, all passing (21 new distribution job tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (602 tests)
+
 ## Next Task
-Task 59: Create distribution job
+Task 60: Create push notification job

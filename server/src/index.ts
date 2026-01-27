@@ -11,6 +11,7 @@ import { initializeStorage, StorageError } from './storage';
 import { configurePassport, passport } from './auth';
 import { authRoutes, videoRoutes, publicRoutes, userRoutes, adminRoutes } from './routes';
 import { initializeScheduler, shutdownScheduler } from './scheduler';
+import { registerAllJobs } from './jobs';
 
 // Initialize configuration first - exits if required variables are missing
 const config = initializeConfig();
@@ -98,7 +99,7 @@ async function start(): Promise<void> {
 
     // Initialize and start job scheduler
     const scheduler = initializeScheduler();
-    // Note: Jobs will be registered in future tasks (59-62)
+    registerAllJobs();
     scheduler.start();
 
     // Start listening

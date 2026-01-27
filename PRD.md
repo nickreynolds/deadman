@@ -1046,7 +1046,7 @@ Each task includes:
   - Eligible videos are marked DISTRIBUTED
   - expires_at is set to 7 days after distribution
   - Job handles empty result set gracefully
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 60: Create push notification job**
 - **Category:** Background Jobs
