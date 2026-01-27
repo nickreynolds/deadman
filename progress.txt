@@ -1179,5 +1179,38 @@
 - Total: 641 tests, all passing (39 new tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (641 tests)
 
+### Task 61: Create expiration cleanup job (2026-01-27)
+- Created src/jobs/expiration.job.ts with expiration job implementation:
+  - ExpirationJobResult interface: tracks processed, expired, failed counts, bytes freed, and errors
+  - processExpiration(): Main function that queries DISTRIBUTED videos with expires_at <= now
+    - Deletes video file from storage using cleanupFile()
+    - Updates status to EXPIRED
+    - Decrements user's storage_used_bytes
+    - Tracks total bytes freed across all processed videos
+    - Handles partial failures gracefully (continues processing other videos)
+    - Returns comprehensive result with success/failure counts
+  - expirationJobHandler(): Entry point for scheduler
+- Updated src/jobs/index.ts:
+  - Added JobNames.EXPIRATION_CLEANUP constant
+  - Registered expiration job with DAILY_MIDNIGHT cron (0 0 * * *)
+  - runOnStart: false to avoid unexpected deletions on startup
+  - Exports processExpiration, expirationJobHandler, and ExpirationJobResult type
+- Updated src/test/setup.ts:
+  - Added BigInt serialization fix for Jest (BigInt.prototype.toJSON)
+- Created comprehensive unit tests (src/jobs/expiration.job.test.ts):
+  - Tests for processExpiration(): empty results, query parameters, time handling
+  - Tests for single video expiration: success, file path construction, file cleanup
+  - Tests for multiple videos: success, partial failures, all failures
+  - Tests for error handling: cleanupFile failure, updateUserStorageUsage failure, database errors
+  - Tests for bytesFreed tracking, storage decrement calculation
+  - Tests for expirationJobHandler(): success, partial failure, critical error
+- Updated src/jobs/index.test.ts:
+  - Added tests for EXPIRATION_CLEANUP job name
+  - Added tests for expiration job registration with daily midnight cron
+  - Added tests for runOnStart disabled
+  - Updated test for registering all three jobs
+- Total: 665 tests, all passing (24 new tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (665 tests)
+
 ## Next Task
-Task 61: Create expiration cleanup job
+Task 62: Add job error handling

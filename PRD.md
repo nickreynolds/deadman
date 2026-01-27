@@ -1066,7 +1066,7 @@ Each task includes:
   - Expired video files are deleted from storage
   - Video status updated to EXPIRED
   - User storage_used_bytes is decremented
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 62: Add job error handling**
 - **Category:** Error Handling

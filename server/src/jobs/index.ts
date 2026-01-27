@@ -16,9 +16,16 @@ export {
   type NotificationJobResult,
 } from './notification.job';
 
+export {
+  processExpiration,
+  expirationJobHandler,
+  type ExpirationJobResult,
+} from './expiration.job';
+
 import { getScheduler, CronExpressions } from '../scheduler';
 import { distributionJobHandler } from './distribution.job';
 import { notificationJobHandler } from './notification.job';
+import { expirationJobHandler } from './expiration.job';
 import { createChildLogger } from '../logger';
 
 const logger = createChildLogger({ component: 'jobs' });
@@ -29,8 +36,7 @@ const logger = createChildLogger({ component: 'jobs' });
 export const JobNames = {
   DISTRIBUTION: 'distribution',
   PUSH_NOTIFICATIONS: 'push-notifications',
-  // Future jobs:
-  // EXPIRATION_CLEANUP: 'expiration-cleanup',
+  EXPIRATION_CLEANUP: 'expiration-cleanup',
 } as const;
 
 /**
@@ -54,6 +60,15 @@ export function registerAllJobs(): void {
     name: JobNames.PUSH_NOTIFICATIONS,
     cronExpression: CronExpressions.DAILY_9AM,
     handler: notificationJobHandler,
+    runOnStart: false, // Don't run immediately on startup
+  });
+
+  // Expiration cleanup job - runs daily at midnight UTC
+  // This expires and deletes old distributed videos (7 days after distribution)
+  scheduler.registerJob({
+    name: JobNames.EXPIRATION_CLEANUP,
+    cronExpression: CronExpressions.DAILY_MIDNIGHT,
+    handler: expirationJobHandler,
     runOnStart: false, // Don't run immediately on startup
   });
 

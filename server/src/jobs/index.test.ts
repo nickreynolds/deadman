@@ -47,6 +47,11 @@ jest.mock('./notification.job', () => ({
   notificationJobHandler: jest.fn(),
 }));
 
+// Mock the expiration job handler
+jest.mock('./expiration.job', () => ({
+  expirationJobHandler: jest.fn(),
+}));
+
 import { registerAllJobs, JobNames } from './index';
 import { getScheduler, resetScheduler } from '../scheduler';
 
@@ -68,6 +73,10 @@ describe('Jobs Module', () => {
     it('should export PUSH_NOTIFICATIONS job name', () => {
       expect(JobNames.PUSH_NOTIFICATIONS).toBe('push-notifications');
     });
+
+    it('should export EXPIRATION_CLEANUP job name', () => {
+      expect(JobNames.EXPIRATION_CLEANUP).toBe('expiration-cleanup');
+    });
   });
 
   describe('registerAllJobs', () => {
@@ -83,6 +92,13 @@ describe('Jobs Module', () => {
 
       const scheduler = getScheduler();
       expect(scheduler.hasJob(JobNames.PUSH_NOTIFICATIONS)).toBe(true);
+    });
+
+    it('should register the expiration cleanup job', () => {
+      registerAllJobs();
+
+      const scheduler = getScheduler();
+      expect(scheduler.hasJob(JobNames.EXPIRATION_CLEANUP)).toBe(true);
     });
 
     it('should register distribution job with hourly cron expression', () => {
@@ -105,6 +121,17 @@ describe('Jobs Module', () => {
 
       expect(notificationJob).toBeDefined();
       expect(notificationJob?.cronExpression).toBe('0 9 * * *'); // DAILY_9AM
+    });
+
+    it('should register expiration cleanup job with daily midnight cron expression', () => {
+      registerAllJobs();
+
+      const scheduler = getScheduler();
+      const status = scheduler.getStatus();
+      const expirationJob = status.jobs.find((j) => j.name === JobNames.EXPIRATION_CLEANUP);
+
+      expect(expirationJob).toBeDefined();
+      expect(expirationJob?.cronExpression).toBe('0 0 * * *'); // DAILY_MIDNIGHT
     });
 
     it('should not run distribution job on start', () => {
@@ -131,13 +158,25 @@ describe('Jobs Module', () => {
       expect(notificationJob?.runCount).toBe(0);
     });
 
+    it('should not run expiration cleanup job on start', () => {
+      registerAllJobs();
+
+      const scheduler = getScheduler();
+      const status = scheduler.getStatus();
+      const expirationJob = status.jobs.find((j) => j.name === JobNames.EXPIRATION_CLEANUP);
+
+      // Job should be registered but not running
+      expect(expirationJob?.isRunning).toBe(false);
+      expect(expirationJob?.runCount).toBe(0);
+    });
+
     it('should throw if called twice (duplicate job registration)', () => {
       registerAllJobs();
 
       expect(() => registerAllJobs()).toThrow('Job "distribution" is already registered');
     });
 
-    it('should register both jobs', () => {
+    it('should register all three jobs', () => {
       registerAllJobs();
 
       const scheduler = getScheduler();
@@ -145,7 +184,8 @@ describe('Jobs Module', () => {
 
       expect(jobNames).toContain(JobNames.DISTRIBUTION);
       expect(jobNames).toContain(JobNames.PUSH_NOTIFICATIONS);
-      expect(jobNames).toHaveLength(2);
+      expect(jobNames).toContain(JobNames.EXPIRATION_CLEANUP);
+      expect(jobNames).toHaveLength(3);
     });
   });
 });
