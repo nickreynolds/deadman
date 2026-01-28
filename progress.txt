@@ -1212,5 +1212,58 @@
 - Total: 665 tests, all passing (24 new tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (665 tests)
 
+### Task 62: Add job error handling (2026-01-28)
+- Created src/services/alert.service.ts with comprehensive alerting functionality:
+  - Alert interface with title, message, severity, source, context, timestamp
+  - AlertSeverity type: info, warning, error, critical
+  - registerAlertHandler(): Register custom alert handlers (email, Slack, etc.)
+  - unregisterAlertHandler(): Remove registered handlers
+  - getAlertHandlerNames(): List all registered handlers
+  - resetAlertHandlers(): Clear custom handlers, keep default logging
+  - sendAlert(): Send alert through all registered handlers
+  - alert(): Create and send an alert with auto-generated timestamp
+  - alertJobFailure(): Send job failure alert with severity escalation:
+    - 1-2 consecutive failures: warning
+    - 3-4 consecutive failures: error
+    - 5+ consecutive failures: critical
+  - alertJobRecovered(): Send recovery alert when job succeeds after failures
+- Updated src/scheduler/index.ts with retry logic and alerting:
+  - RetryConfig interface: maxRetries, baseDelayMs, exponentialBackoff, maxDelayMs
+  - DEFAULT_RETRY_CONFIG: 3 retries, 1s base delay, exponential backoff, 30s max
+  - calculateRetryDelay(): Calculate delay with optional exponential backoff
+  - isTransientError(): Detect retryable errors (timeout, connection, deadlock)
+  - Added consecutiveFailures and lastSuccessfulRun tracking to RegisteredJob
+  - executeWithRetry(): Private method for retry logic with transient error detection
+  - runJobNow() updated to:
+    - Retry transient failures with exponential backoff
+    - Track consecutive failures
+    - Send failure alerts when alertOnFailure !== false
+    - Send recovery alerts when job succeeds after failures
+  - createWrappedHandler() updated with same retry and alert logic for scheduled runs
+  - JobConfig extended with retry and alertOnFailure options
+  - SchedulerStatus extended with consecutiveFailures and lastSuccessfulRun
+- Transient error patterns detected:
+  - Timeout errors (timeout, timed out, etimedout)
+  - Connection errors (connection refused, reset, econnrefused, econnreset)
+  - Service availability (temporarily unavailable, too many connections)
+  - Database locks (deadlock, lock wait timeout)
+- Non-transient errors do not trigger retries (fail fast)
+- Created comprehensive unit tests (src/services/alert.service.test.ts):
+  - Tests for registerAlertHandler(), unregisterAlertHandler(), getAlertHandlerNames()
+  - Tests for resetAlertHandlers(), sendAlert(), alert()
+  - Tests for alertJobFailure() severity escalation and context
+  - Tests for alertJobRecovered()
+- Added scheduler tests (src/scheduler/index.test.ts):
+  - Tests for retry configuration (default and custom)
+  - Tests for consecutive failure tracking
+  - Tests for lastSuccessfulRun tracking
+  - Tests for calculateRetryDelay() with/without exponential backoff
+  - Tests for isTransientError() with various error types
+- Updated test mocks:
+  - Added createChildLogger mock to logger mock
+  - Added alert service mock for scheduler tests
+- Total: 697 tests, all passing (32 new tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (697 tests)
+
 ## Next Task
-Task 62: Add job error handling
+Task 63: Write job scheduler tests

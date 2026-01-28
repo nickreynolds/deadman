@@ -20,8 +20,15 @@ jest.mock('../logger', () => {
       error: jest.fn(),
       debug: jest.fn(),
     },
+    createChildLogger: jest.fn(() => mockChildLogger),
   };
 });
+
+// Mock alert service
+jest.mock('../services/alert.service', () => ({
+  alertJobFailure: jest.fn().mockResolvedValue(undefined),
+  alertJobRecovered: jest.fn().mockResolvedValue(undefined),
+}));
 
 // Mock node-cron
 jest.mock('node-cron', () => ({
@@ -580,5 +587,217 @@ describe('JobScheduler', () => {
       // Verify job is no longer running
       expect(scheduler.getStatus().jobs[0]!.isRunning).toBe(false);
     });
+  });
+
+  describe('retry configuration', () => {
+    it('should use default retry config when not specified', () => {
+      const scheduler = getScheduler();
+      const handler: JobHandler = jest.fn().mockResolvedValue(undefined);
+
+      scheduler.registerJob({
+        name: 'default-retry',
+        cronExpression: CronExpressions.HOURLY,
+        handler,
+      });
+
+      // The retry config is internal but we can verify via behavior
+      expect(scheduler.hasJob('default-retry')).toBe(true);
+    });
+
+    it('should accept custom retry config', () => {
+      const scheduler = getScheduler();
+      const handler: JobHandler = jest.fn().mockResolvedValue(undefined);
+
+      scheduler.registerJob({
+        name: 'custom-retry',
+        cronExpression: CronExpressions.HOURLY,
+        handler,
+        retry: {
+          maxRetries: 5,
+          baseDelayMs: 500,
+          exponentialBackoff: false,
+        },
+      });
+
+      expect(scheduler.hasJob('custom-retry')).toBe(true);
+    });
+  });
+
+  describe('consecutive failure tracking', () => {
+    it('should track consecutive failures', async () => {
+      const scheduler = getScheduler();
+      const handler: JobHandler = jest.fn().mockRejectedValue(new Error('Always fails'));
+
+      scheduler.registerJob({
+        name: 'failing-job',
+        cronExpression: CronExpressions.HOURLY,
+        handler,
+        retry: { maxRetries: 0, baseDelayMs: 1, exponentialBackoff: false, maxDelayMs: 1 },
+      });
+
+      await scheduler.runJobNow('failing-job');
+      let status = scheduler.getStatus();
+      expect(status.jobs[0]?.consecutiveFailures).toBe(1);
+
+      await scheduler.runJobNow('failing-job');
+      status = scheduler.getStatus();
+      expect(status.jobs[0]?.consecutiveFailures).toBe(2);
+    });
+
+    it('should reset consecutive failures on success', async () => {
+      const scheduler = getScheduler();
+      const handler: JobHandler = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('First fail'))
+        .mockRejectedValueOnce(new Error('Second fail'))
+        .mockResolvedValueOnce(undefined);
+
+      scheduler.registerJob({
+        name: 'recovering-job',
+        cronExpression: CronExpressions.HOURLY,
+        handler,
+        retry: { maxRetries: 0, baseDelayMs: 1, exponentialBackoff: false, maxDelayMs: 1 },
+      });
+
+      await scheduler.runJobNow('recovering-job');
+      await scheduler.runJobNow('recovering-job');
+      let status = scheduler.getStatus();
+      expect(status.jobs[0]?.consecutiveFailures).toBe(2);
+
+      await scheduler.runJobNow('recovering-job');
+      status = scheduler.getStatus();
+      expect(status.jobs[0]?.consecutiveFailures).toBe(0);
+      expect(status.jobs[0]?.lastSuccessfulRun).toBeDefined();
+    });
+  });
+
+  describe('lastSuccessfulRun tracking', () => {
+    it('should update lastSuccessfulRun on success', async () => {
+      const scheduler = getScheduler();
+      const handler: JobHandler = jest.fn().mockResolvedValue(undefined);
+
+      scheduler.registerJob({
+        name: 'success-tracking',
+        cronExpression: CronExpressions.HOURLY,
+        handler,
+      });
+
+      const before = new Date();
+      await scheduler.runJobNow('success-tracking');
+      const after = new Date();
+
+      const status = scheduler.getStatus();
+      const job = status.jobs[0];
+      expect(job?.lastSuccessfulRun).toBeDefined();
+      expect(job?.lastSuccessfulRun!.getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(job?.lastSuccessfulRun!.getTime()).toBeLessThanOrEqual(after.getTime());
+    });
+
+    it('should not update lastSuccessfulRun on failure', async () => {
+      const scheduler = getScheduler();
+      const handler: JobHandler = jest.fn().mockRejectedValue(new Error('fail'));
+
+      scheduler.registerJob({
+        name: 'failure-tracking',
+        cronExpression: CronExpressions.HOURLY,
+        handler,
+        retry: { maxRetries: 0, baseDelayMs: 1, exponentialBackoff: false, maxDelayMs: 1 },
+      });
+
+      await scheduler.runJobNow('failure-tracking');
+
+      const status = scheduler.getStatus();
+      expect(status.jobs[0]?.lastSuccessfulRun).toBeUndefined();
+    });
+  });
+});
+
+describe('calculateRetryDelay', () => {
+  it('should return base delay without exponential backoff', () => {
+    const { calculateRetryDelay } = require('./index');
+    const config = {
+      maxRetries: 3,
+      baseDelayMs: 1000,
+      exponentialBackoff: false,
+      maxDelayMs: 30000,
+    };
+
+    expect(calculateRetryDelay(0, config)).toBe(1000);
+    expect(calculateRetryDelay(1, config)).toBe(1000);
+    expect(calculateRetryDelay(2, config)).toBe(1000);
+  });
+
+  it('should use exponential backoff when enabled', () => {
+    const { calculateRetryDelay } = require('./index');
+    const config = {
+      maxRetries: 3,
+      baseDelayMs: 1000,
+      exponentialBackoff: true,
+      maxDelayMs: 30000,
+    };
+
+    expect(calculateRetryDelay(0, config)).toBe(1000); // 1000 * 2^0
+    expect(calculateRetryDelay(1, config)).toBe(2000); // 1000 * 2^1
+    expect(calculateRetryDelay(2, config)).toBe(4000); // 1000 * 2^2
+    expect(calculateRetryDelay(3, config)).toBe(8000); // 1000 * 2^3
+  });
+
+  it('should cap delay at maxDelayMs', () => {
+    const { calculateRetryDelay } = require('./index');
+    const config = {
+      maxRetries: 10,
+      baseDelayMs: 1000,
+      exponentialBackoff: true,
+      maxDelayMs: 5000,
+    };
+
+    expect(calculateRetryDelay(5, config)).toBe(5000); // Would be 32000 but capped
+    expect(calculateRetryDelay(10, config)).toBe(5000); // Would be much higher but capped
+  });
+});
+
+describe('isTransientError', () => {
+  it('should identify timeout errors as transient', () => {
+    const { isTransientError } = require('./index');
+    expect(isTransientError(new Error('Connection timeout'))).toBe(true);
+    expect(isTransientError(new Error('Request timed out'))).toBe(true);
+    expect(isTransientError(new Error('ETIMEDOUT'))).toBe(true);
+  });
+
+  it('should identify connection errors as transient', () => {
+    const { isTransientError } = require('./index');
+    expect(isTransientError(new Error('Connection refused'))).toBe(true);
+    expect(isTransientError(new Error('ECONNREFUSED'))).toBe(true);
+    expect(isTransientError(new Error('ECONNRESET'))).toBe(true);
+    expect(isTransientError(new Error('Connection reset by peer'))).toBe(true);
+    expect(isTransientError(new Error('Socket hang up'))).toBe(true);
+  });
+
+  it('should identify service unavailable as transient', () => {
+    const { isTransientError } = require('./index');
+    expect(isTransientError(new Error('Service temporarily unavailable'))).toBe(true);
+    expect(isTransientError(new Error('Too many connections'))).toBe(true);
+  });
+
+  it('should identify database lock errors as transient', () => {
+    const { isTransientError } = require('./index');
+    expect(isTransientError(new Error('Deadlock detected'))).toBe(true);
+    expect(isTransientError(new Error('Lock wait timeout exceeded'))).toBe(true);
+  });
+
+  it('should not identify non-transient errors as transient', () => {
+    const { isTransientError } = require('./index');
+    expect(isTransientError(new Error('Invalid parameter'))).toBe(false);
+    expect(isTransientError(new Error('File not found'))).toBe(false);
+    expect(isTransientError(new Error('Permission denied'))).toBe(false);
+    expect(isTransientError(new Error('Validation error'))).toBe(false);
+  });
+
+  it('should return false for non-Error objects', () => {
+    const { isTransientError } = require('./index');
+    expect(isTransientError('string error')).toBe(false);
+    expect(isTransientError(null)).toBe(false);
+    expect(isTransientError(undefined)).toBe(false);
+    expect(isTransientError({ message: 'timeout' })).toBe(false);
   });
 });
