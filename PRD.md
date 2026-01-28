@@ -1116,7 +1116,7 @@ Each task includes:
   - Notifications include video-specific information
   - Reminders are sent for each active video
   - Users with multiple videos receive multiple notifications
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 67: Create notification templates**
 - **Category:** Business Logic

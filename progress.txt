@@ -1350,5 +1350,24 @@
 - No additional code changes required - marked as FINISHED
 - Verified: pnpm run build compiles successfully, pnpm test passes (730 tests)
 
+### Task 66: Implement check-in reminder notifications (2026-01-28)
+- Task verified as already complete - per-video check-in reminder logic was implemented during Tasks 60, 64, and 65
+- Implementation in src/services/notification.service.ts:
+  - sendCheckInReminder(): Sends notification with video-specific information
+    - Notification title: "Check-In Reminder"
+    - Notification body includes video title and time until distribution
+    - Data payload includes videoId, userId, and action type for deep linking
+  - formatTimeUntilDistribution(): Formats time for display (e.g., "2 days", "5 hours")
+- Implementation in src/jobs/notification.job.ts:
+  - processNotifications(): Queries ALL active videos and sends per-video notifications
+    - Users with multiple videos receive multiple notifications (one per video)
+    - Each notification includes video-specific title and distribution time
+- Comprehensive test coverage verifying all PRD requirements:
+  - Tests for video-specific information in notifications (title, time)
+  - Tests for per-video notifications (every active video gets a notification)
+  - Tests for multiple notifications per user (lines 150-190 in notification.job.test.ts)
+- No additional code changes required - marked as FINISHED
+- Verified: pnpm run build compiles successfully, pnpm test passes (730 tests)
+
 ## Next Task
-Task 66: Implement check-in reminder notifications
+Task 67: Create notification templates
