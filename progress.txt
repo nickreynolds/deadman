@@ -1325,5 +1325,30 @@
 - Total: 730 tests, all passing (33 new tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (730 tests)
 
+### Task 65: Create notification service (2026-01-28)
+- Task verified as already complete - notification service was implemented as part of Task 64
+- Implementation in src/services/notification.service.ts provides full FCM notification capability:
+  - sendCheckInReminder(): Sends single notification to valid FCM token
+    - Validates FCM token (returns failure for empty/null tokens)
+    - Uses Firebase service when configured
+    - Graceful fallback to logging when Firebase not configured
+    - Returns NotificationResult with success/failure status and optional messageId
+  - sendCheckInReminders(): Batch send multiple notifications
+  - formatTimeUntilDistribution(): Formats time for display in notifications
+- Invalid token handling:
+  - Empty/null tokens rejected with "No FCM token registered" error
+  - FCM error codes handled (invalid-registration-token, registration-token-not-registered)
+  - Returns specific error message "Invalid or unregistered FCM token"
+  - Other errors returned with original error message
+- Comprehensive test coverage (16 tests in src/services/notification.service.test.ts):
+  - Tests for valid payload with/without Firebase configured
+  - Tests for empty/null FCM token handling
+  - Tests for Firebase messaging (success, null return, errors)
+  - Tests for invalid and unregistered token errors
+  - Tests for sendCheckInReminders batch processing
+  - Tests for formatTimeUntilDistribution (days, hours, minutes, edge cases)
+- No additional code changes required - marked as FINISHED
+- Verified: pnpm run build compiles successfully, pnpm test passes (730 tests)
+
 ## Next Task
-Task 65: Create notification service
+Task 66: Implement check-in reminder notifications

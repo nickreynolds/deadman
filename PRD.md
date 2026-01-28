@@ -1107,7 +1107,7 @@ Each task includes:
   - Service can send notifications to valid FCM tokens
   - Service handles invalid tokens gracefully
   - Service returns success/failure status
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 66: Implement check-in reminder notifications**
 - **Category:** Business Logic
