@@ -1087,7 +1087,7 @@ Each task includes:
   - Tests cover expiration cleanup logic
   - Tests verify error handling
   - All tests pass
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.1.10 Push Notifications
 
