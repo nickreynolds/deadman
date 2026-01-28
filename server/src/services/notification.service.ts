@@ -1,13 +1,16 @@
 /**
  * Notification Service
  *
- * Placeholder service for sending push notifications.
- * This will be implemented with Firebase Admin SDK in Task 64-65.
- *
- * Currently logs notifications instead of sending them.
+ * Service for sending push notifications via Firebase Cloud Messaging.
+ * If Firebase is not configured, notifications are logged but not sent.
  */
 
 import { createChildLogger } from '../logger';
+import {
+  isFirebaseReady,
+  sendFcmMessage,
+  isFirebaseConfigured,
+} from './firebase.service';
 
 const logger = createChildLogger({ component: 'notification-service' });
 
@@ -34,14 +37,12 @@ export interface NotificationResult {
   success: boolean;
   userId: string;
   videoId: string;
+  messageId?: string;
   error?: string;
 }
 
 /**
  * Send a check-in reminder notification
- *
- * TODO: Implement with Firebase Admin SDK (Task 64-65)
- * Currently logs the notification instead of sending
  *
  * @param payload Notification payload
  * @returns Result of the send attempt
@@ -65,26 +66,112 @@ export async function sendCheckInReminder(
     };
   }
 
-  // TODO: Replace with actual Firebase Admin SDK call
-  // For now, log the notification that would be sent
-  logger.info(
-    {
+  // Check if Firebase is ready
+  if (!isFirebaseReady()) {
+    // Log the notification that would be sent
+    logger.info(
+      {
+        userId,
+        videoId,
+        videoTitle,
+        timeUntilDistribution,
+        fcmToken: fcmToken.substring(0, 10) + '...',
+      },
+      'Would send check-in reminder notification (Firebase not configured)'
+    );
+
+    // Return success for development/testing when Firebase not configured
+    return {
+      success: true,
       userId,
       videoId,
-      videoTitle,
-      timeUntilDistribution,
-      fcmToken: fcmToken.substring(0, 10) + '...', // Truncate for security
-    },
-    'Would send check-in reminder notification (Firebase not configured)'
-  );
+    };
+  }
 
-  // Simulate successful send for development/testing
-  // In production, this would call Firebase Admin SDK
-  return {
-    success: true,
-    userId,
-    videoId,
-  };
+  try {
+    // Build notification message
+    const messageId = await sendFcmMessage({
+      token: fcmToken,
+      notification: {
+        title: 'Check-In Reminder',
+        body: `Your video "${videoTitle}" will be distributed in ${timeUntilDistribution}. Tap to prevent distribution.`,
+      },
+      data: {
+        type: 'CHECK_IN_REMINDER',
+        videoId,
+        userId,
+        action: 'OPEN_VIDEO',
+      },
+      android: {
+        priority: 'high',
+        ttl: 86400, // 24 hours
+      },
+      apns: {
+        headers: {
+          'apns-priority': '10', // High priority
+        },
+        payload: {
+          aps: {
+            badge: 1,
+            sound: 'default',
+            contentAvailable: true,
+          },
+        },
+      },
+    });
+
+    if (messageId) {
+      logger.info(
+        { userId, videoId, messageId },
+        'Check-in reminder notification sent successfully'
+      );
+      return {
+        success: true,
+        userId,
+        videoId,
+        messageId,
+      };
+    }
+
+    // Firebase returned null (shouldn't happen if isFirebaseReady() was true)
+    return {
+      success: false,
+      userId,
+      videoId,
+      error: 'Firebase messaging returned null',
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Check for specific FCM error codes
+    const errorCode = (error as { code?: string }).code;
+    if (
+      errorCode === 'messaging/invalid-registration-token' ||
+      errorCode === 'messaging/registration-token-not-registered'
+    ) {
+      logger.warn(
+        { userId, videoId, errorCode },
+        'FCM token is invalid or unregistered'
+      );
+      return {
+        success: false,
+        userId,
+        videoId,
+        error: 'Invalid or unregistered FCM token',
+      };
+    }
+
+    logger.error(
+      { userId, videoId, err: error },
+      'Failed to send check-in reminder notification'
+    );
+    return {
+      success: false,
+      userId,
+      videoId,
+      error: errorMessage,
+    };
+  }
 }
 
 /**
@@ -121,14 +208,9 @@ export async function sendCheckInReminders(
 }
 
 /**
- * Check if Firebase is configured
- *
- * TODO: Implement actual check when Firebase Admin SDK is set up
+ * Re-export isFirebaseConfigured for backward compatibility
  */
-export function isFirebaseConfigured(): boolean {
-  // Will be implemented in Task 64
-  return false;
-}
+export { isFirebaseConfigured };
 
 /**
  * Format time until distribution for display in notification

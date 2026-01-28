@@ -1281,5 +1281,49 @@
 - No additional code changes required - marked as FINISHED
 - Verified: pnpm run build compiles successfully, pnpm test passes (697 tests)
 
+### Task 64: Set up Firebase Admin SDK (2026-01-28)
+- Created src/services/firebase.service.ts with comprehensive Firebase Admin SDK integration:
+  - isFirebaseConfigured(): Check if Firebase credentials are configured in environment
+  - initializeFirebase(): Initialize Firebase Admin SDK with service account credentials
+    - Idempotent (safe to call multiple times)
+    - Gracefully handles missing credentials (logs info, continues without Firebase)
+    - Stores initialization error for debugging
+  - getFirebaseApp(): Get Firebase app instance (auto-initializes if needed)
+  - getFirebaseMessaging(): Get Firebase messaging instance for sending notifications
+  - isFirebaseReady(): Check if Firebase is ready to send notifications
+  - shutdownFirebase(): Clean shutdown of Firebase SDK
+  - resetFirebase(): Reset state (for testing)
+  - sendFcmMessage(): Send push notification via FCM
+    - Supports notification payload (title, body)
+    - Supports custom data payload for app processing
+    - Supports Android-specific options (priority, TTL)
+    - Supports iOS-specific options (headers, badge, sound)
+    - Returns null when Firebase not available (graceful degradation)
+  - validateFcmToken(): Validate FCM token via dry-run send
+    - Detects invalid and unregistered tokens
+- Updated src/services/notification.service.ts to use Firebase service:
+  - sendCheckInReminder() now sends real notifications when Firebase is configured
+  - Handles FCM error codes (invalid-registration-token, registration-token-not-registered)
+  - Builds complete FCM message with deep linking data
+  - Graceful fallback to logging when Firebase not configured
+- Updated src/index.ts:
+  - Imports and initializes Firebase on startup (after database connection)
+  - Shuts down Firebase during graceful shutdown (before database disconnect)
+- Created comprehensive unit tests (src/services/firebase.service.test.ts):
+  - Tests for isFirebaseConfigured(): all credential combinations
+  - Tests for initializeFirebase(): success, skip when not configured, idempotent, error handling
+  - Tests for getFirebaseApp(): returns app, null when not configured, auto-initialize
+  - Tests for getFirebaseMessaging(): returns messaging, null when not available
+  - Tests for shutdownFirebase(): clean shutdown, handles errors
+  - Tests for resetFirebase(): resets all state
+  - Tests for sendFcmMessage(): success, null when unavailable, error handling, options
+  - Tests for validateFcmToken(): valid token, invalid token, unregistered token
+- Updated notification service tests to mock firebase.service:
+  - Added tests for Firebase-enabled notification sending
+  - Added tests for FCM error handling (invalid token, unregistered token)
+  - Added tests for messageId in successful response
+- Total: 730 tests, all passing (33 new tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (730 tests)
+
 ## Next Task
-Task 64: Set up Firebase Admin SDK
+Task 65: Create notification service

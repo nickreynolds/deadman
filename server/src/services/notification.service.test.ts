@@ -2,6 +2,13 @@
  * Notification Service Unit Tests
  */
 
+// Mock firebase service before importing
+jest.mock('./firebase.service', () => ({
+  isFirebaseReady: jest.fn().mockReturnValue(false),
+  isFirebaseConfigured: jest.fn().mockReturnValue(false),
+  sendFcmMessage: jest.fn(),
+}));
+
 import {
   sendCheckInReminder,
   sendCheckInReminders,
@@ -9,6 +16,11 @@ import {
   isFirebaseConfigured,
   CheckInReminderPayload,
 } from './notification.service';
+import {
+  isFirebaseReady,
+  sendFcmMessage,
+  isFirebaseConfigured as mockIsFirebaseConfigured,
+} from './firebase.service';
 
 // Mock logger
 jest.mock('../logger', () => ({
@@ -21,12 +33,16 @@ jest.mock('../logger', () => ({
 }));
 
 describe('Notification Service', () => {
+  const mockIsFirebaseReady = isFirebaseReady as jest.MockedFunction<typeof isFirebaseReady>;
+  const mockSendFcmMessage = sendFcmMessage as jest.MockedFunction<typeof sendFcmMessage>;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsFirebaseReady.mockReturnValue(false);
   });
 
   describe('sendCheckInReminder', () => {
-    it('should return success for valid payload', async () => {
+    it('should return success for valid payload when Firebase not configured', async () => {
       const payload: CheckInReminderPayload = {
         fcmToken: 'valid-fcm-token-12345',
         userId: 'user-1',
@@ -76,6 +92,119 @@ describe('Notification Service', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('No FCM token registered');
+    });
+
+    describe('with Firebase configured', () => {
+      beforeEach(() => {
+        mockIsFirebaseReady.mockReturnValue(true);
+      });
+
+      it('should send notification via Firebase when configured', async () => {
+        mockSendFcmMessage.mockResolvedValue('message-id-123');
+
+        const payload: CheckInReminderPayload = {
+          fcmToken: 'valid-fcm-token-12345',
+          userId: 'user-1',
+          videoId: 'video-1',
+          videoTitle: 'Test Video',
+          timeUntilDistribution: '2 days',
+        };
+
+        const result = await sendCheckInReminder(payload);
+
+        expect(result).toEqual({
+          success: true,
+          userId: 'user-1',
+          videoId: 'video-1',
+          messageId: 'message-id-123',
+        });
+        expect(mockSendFcmMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            token: 'valid-fcm-token-12345',
+            notification: {
+              title: 'Check-In Reminder',
+              body: expect.stringContaining('Test Video'),
+            },
+            data: expect.objectContaining({
+              type: 'CHECK_IN_REMINDER',
+              videoId: 'video-1',
+              userId: 'user-1',
+            }),
+          })
+        );
+      });
+
+      it('should return failure when Firebase returns null', async () => {
+        mockSendFcmMessage.mockResolvedValue(null);
+
+        const payload: CheckInReminderPayload = {
+          fcmToken: 'valid-fcm-token-12345',
+          userId: 'user-1',
+          videoId: 'video-1',
+          videoTitle: 'Test Video',
+          timeUntilDistribution: '2 days',
+        };
+
+        const result = await sendCheckInReminder(payload);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Firebase messaging returned null');
+      });
+
+      it('should handle invalid token error', async () => {
+        const error = new Error('Invalid token') as Error & { code: string };
+        error.code = 'messaging/invalid-registration-token';
+        mockSendFcmMessage.mockRejectedValue(error);
+
+        const payload: CheckInReminderPayload = {
+          fcmToken: 'invalid-token',
+          userId: 'user-1',
+          videoId: 'video-1',
+          videoTitle: 'Test Video',
+          timeUntilDistribution: '2 days',
+        };
+
+        const result = await sendCheckInReminder(payload);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Invalid or unregistered FCM token');
+      });
+
+      it('should handle unregistered token error', async () => {
+        const error = new Error('Token not registered') as Error & { code: string };
+        error.code = 'messaging/registration-token-not-registered';
+        mockSendFcmMessage.mockRejectedValue(error);
+
+        const payload: CheckInReminderPayload = {
+          fcmToken: 'unregistered-token',
+          userId: 'user-1',
+          videoId: 'video-1',
+          videoTitle: 'Test Video',
+          timeUntilDistribution: '2 days',
+        };
+
+        const result = await sendCheckInReminder(payload);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Invalid or unregistered FCM token');
+      });
+
+      it('should handle other send errors', async () => {
+        mockSendFcmMessage.mockRejectedValue(new Error('Network error'));
+
+        const payload: CheckInReminderPayload = {
+          fcmToken: 'valid-token',
+          userId: 'user-1',
+          videoId: 'video-1',
+          videoTitle: 'Test Video',
+          timeUntilDistribution: '2 days',
+        };
+
+        const result = await sendCheckInReminder(payload);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Network error');
+      });
     });
   });
 
@@ -239,7 +368,9 @@ describe('Notification Service', () => {
   });
 
   describe('isFirebaseConfigured', () => {
-    it('should return false (not yet implemented)', () => {
+    it('should re-export isFirebaseConfigured from firebase.service', () => {
+      (mockIsFirebaseConfigured as jest.Mock).mockReturnValue(false);
+
       const result = isFirebaseConfigured();
 
       expect(result).toBe(false);

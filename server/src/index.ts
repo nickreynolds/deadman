@@ -12,6 +12,7 @@ import { configurePassport, passport } from './auth';
 import { authRoutes, videoRoutes, publicRoutes, userRoutes, adminRoutes } from './routes';
 import { initializeScheduler, shutdownScheduler } from './scheduler';
 import { registerAllJobs } from './jobs';
+import { initializeFirebase, shutdownFirebase } from './services/firebase.service';
 
 // Initialize configuration first - exits if required variables are missing
 const config = initializeConfig();
@@ -76,6 +77,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'Shutdown signal received, shutting down gracefully...');
   shutdownScheduler();
+  await shutdownFirebase();
   await disconnectDatabase();
   process.exit(0);
 }
@@ -96,6 +98,9 @@ async function start(): Promise<void> {
 
     // Connect to database
     await connectDatabase();
+
+    // Initialize Firebase Admin SDK (optional - for push notifications)
+    initializeFirebase();
 
     // Initialize and start job scheduler
     const scheduler = initializeScheduler();
