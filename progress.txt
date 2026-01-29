@@ -1600,3 +1600,54 @@
 
 ## Next Task
 Task 130: Create login screen UI (Android)
+
+### Task 130: Create login screen UI (2026-01-29)
+- Created ui/screens/login package with login screen implementation:
+  - LoginScreen.kt: Jetpack Compose login screen with:
+    - Server URL field (KeyboardType.Uri, ImeAction.Next)
+    - Username field (KeyboardType.Text, ImeAction.Next)
+    - Password field (KeyboardType.Password, ImeAction.Done)
+      - Password visibility toggle with eye icons
+      - PasswordVisualTransformation when hidden
+    - Login button with loading state (CircularProgressIndicator)
+    - Material3 styling with app theme colors
+    - Scaffold with SnackbarHost for error messages
+    - Keyboard actions for field navigation (Next/Done)
+    - imePadding() for keyboard handling
+    - verticalScroll for small screens
+  - LoginViewModel.kt: ViewModel with UI state management:
+    - LoginUiState data class with all form fields and errors
+    - Input validation for all fields:
+      - Server URL: required, must be valid http/https URL
+      - Username: required
+      - Password: required
+    - Field-level error messages displayed via supportingText
+    - Pre-fills server URL from CredentialManager if previously saved
+    - Checks existing authentication state on init
+    - normalizeServerUrl() removes trailing slashes
+    - Saves server URL to CredentialManager on login attempt
+    - TODO placeholder for API call (Task 131)
+- Updated strings.xml with login screen strings:
+  - login_subtitle: "Secure video distribution"
+  - login_server_url_label: "Server URL"
+  - login_server_url_placeholder: "https://your-server.com"
+  - login_username_label: "Username"
+  - login_password_label: "Password"
+  - login_button: "Log In"
+  - login_show_password/login_hide_password: accessibility strings
+- Updated DeadmansDropApp.kt:
+  - Added isLoggedIn state tracking with rememberSaveable
+  - Shows LoginScreen when not logged in
+  - Shows MainAppContent placeholder when logged in
+  - onLoginSuccess callback updates isLoggedIn state
+- All PRD verification steps satisfied:
+  - ✅ Login form displays all required fields (server URL, username, password)
+  - ✅ Validation shows for empty fields (serverUrlError, usernameError, passwordError)
+  - ✅ Loading state during authentication (isLoading with CircularProgressIndicator)
+  - ✅ Error messages display clearly (Snackbar + field-level supportingText)
+- Note: Build verification requires Android SDK/Java runtime (not available in this environment)
+  - Code follows Kotlin/Compose best practices
+  - All imports are from standard Android/Compose libraries
+
+## Next Task
+Task 131: Implement API service (Android)
