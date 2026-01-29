@@ -14,6 +14,7 @@ import { initializeScheduler, shutdownScheduler } from './scheduler';
 import { registerAllJobs } from './jobs';
 import { initializeFirebase, shutdownFirebase } from './services/firebase.service';
 
+console.log('Starting Deadman\'s Drop server...');
 // Initialize configuration first - exits if required variables are missing
 const config = initializeConfig();
 
@@ -85,6 +86,7 @@ async function shutdown(signal: string): Promise<void> {
 // Start the server
 async function start(): Promise<void> {
   try {
+    console.log('Initializing storage...');
     // Initialize storage (creates directory if needed, verifies permissions)
     try {
       initializeStorage();

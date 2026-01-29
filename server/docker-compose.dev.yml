@@ -1,0 +1,29 @@
+ # Deadman's Drop - Docker Compose Configuration for Local Development
+ # Usage:
+ #   docker compose -f docker-compose.dev.yml up -d
+ #   docker compose -f docker-compose.dev.yml down
+
+ services:
+   # PostgreSQL Database (for local development)
+   db:
+     image: postgres:15-alpine
+     container_name: deadmans-drop-db-dev
+     restart: unless-stopped
+     environment:
+       POSTGRES_USER: postgres
+       POSTGRES_PASSWORD: postgres
+       POSTGRES_DB: deadmans_drop
+     ports:
+       - "5432:5432"
+     volumes:
+       - postgres_data_dev:/var/lib/postgresql/data
+     healthcheck:
+       test: ["CMD-SHELL", "pg_isready -U postgres -d deadmans_drop"]
+       interval: 10s
+       timeout: 5s
+       retries: 5
+
+ volumes:
+   postgres_data_dev:
+     driver: local
+
