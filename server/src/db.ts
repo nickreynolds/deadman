@@ -1,6 +1,6 @@
 // Database connection using Prisma
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../prisma/generated';
 import { getConfig } from './config';
 import logger, { createChildLogger } from './logger';
 
@@ -20,15 +20,15 @@ function getPrismaClient(): PrismaClient {
     prisma = new PrismaClient({
       log: config.isDevelopment
         ? [
-            { emit: 'event', level: 'query' },
-            { emit: 'event', level: 'info' },
-            { emit: 'event', level: 'warn' },
-            { emit: 'event', level: 'error' },
-          ]
+          { emit: 'event', level: 'query' },
+          { emit: 'event', level: 'info' },
+          { emit: 'event', level: 'warn' },
+          { emit: 'event', level: 'error' },
+        ]
         : [
-            { emit: 'event', level: 'warn' },
-            { emit: 'event', level: 'error' },
-          ],
+          { emit: 'event', level: 'warn' },
+          { emit: 'event', level: 'error' },
+        ],
     });
   }
 
@@ -36,26 +36,26 @@ function getPrismaClient(): PrismaClient {
   if (!loggingConfigured && prisma) {
     const config = getConfig();
 
-    if (config.isDevelopment) {
-      prisma.$on('query', (e) => {
-        dbLogger.debug(
-          { query: e.query, params: e.params, duration: e.duration },
-          'Database query'
-        );
-      });
+    // if (config.isDevelopment) {
+    //   prisma.$on('query', (e) => {
+    //     dbLogger.debug(
+    //       { query: e.query, params: e.params, duration: e.duration },
+    //       'Database query'
+    //     );
+    //   });
 
-      prisma.$on('info', (e) => {
-        dbLogger.info({ message: e.message }, 'Prisma info');
-      });
-    }
+    //   prisma.$on('info', (e) => {
+    //     dbLogger.info({ message: e.message }, 'Prisma info');
+    //   });
+    // }
 
-    prisma.$on('warn', (e) => {
-      dbLogger.warn({ message: e.message }, 'Prisma warning');
-    });
+    // prisma.$on('warn', (e) => {
+    //   dbLogger.warn({ message: e.message }, 'Prisma warning');
+    // });
 
-    prisma.$on('error', (e) => {
-      dbLogger.error({ message: e.message }, 'Prisma error');
-    });
+    // prisma.$on('error', (e) => {
+    //   dbLogger.error({ message: e.message }, 'Prisma error');
+    // });
 
     loggingConfigured = true;
   }
