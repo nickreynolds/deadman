@@ -1531,5 +1531,24 @@
   - ✅ Firebase initializes on app launch (via Google Services plugin)
 - No code changes required - marked as FINISHED
 
+### Task 128: Configure manifest permissions (2026-01-29)
+- Task verified as already complete - permissions were configured as part of Task 125 (Create Android project)
+- AndroidManifest.xml already includes all required permissions:
+  - Line 10: `android.permission.CAMERA` for video recording
+  - Line 11: `android.permission.RECORD_AUDIO` for audio capture
+  - Line 23: `android.permission.POST_NOTIFICATIONS` for Android 13+ notifications
+- Additional permissions already configured:
+  - INTERNET and ACCESS_NETWORK_STATE for network operations
+  - WRITE_EXTERNAL_STORAGE (maxSdkVersion="28") for legacy storage on older devices
+  - FOREGROUND_SERVICE and FOREGROUND_SERVICE_DATA_SYNC for background uploads
+- Camera features declared:
+  - android.hardware.camera (required="true")
+  - android.hardware.camera.autofocus (required="false")
+- All PRD verification steps satisfied:
+  - ✅ CAMERA permission declared
+  - ✅ RECORD_AUDIO permission declared
+  - ✅ POST_NOTIFICATIONS permission declared (Android 13+)
+- No code changes required - marked as FINISHED
+
 ## Next Task
-Task 128: Configure manifest permissions (Android)
+Task 129: Set up encrypted storage (Android)
