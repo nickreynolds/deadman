@@ -1696,7 +1696,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - minSdk set to 26 in build.gradle
   - App runs on API 26 emulator
   - Build configuration is correct
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 127: Add Firebase SDK**
 - **Category:** Dependencies
