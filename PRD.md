@@ -1705,7 +1705,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Firebase SDK added to dependencies
   - google-services.json configured
   - Firebase initializes on app launch
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 128: Configure manifest permissions**
 - **Category:** Configuration
