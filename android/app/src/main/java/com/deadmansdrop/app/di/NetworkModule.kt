@@ -2,6 +2,8 @@ package com.deadmansdrop.app.di
 
 import com.deadmansdrop.app.BuildConfig
 import com.deadmansdrop.app.data.api.AuthApiService
+import com.deadmansdrop.app.data.auth.TokenAuthenticator
+import com.deadmansdrop.app.data.auth.TokenRefreshInterceptor
 import com.deadmansdrop.app.data.security.CredentialManager
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -85,20 +87,30 @@ object NetworkModule {
     }
 
     /**
-     * Provides OkHttpClient with logging and auth interceptors.
+     * Provides OkHttpClient with logging, auth interceptors, and token refresh.
+     *
+     * The interceptors and authenticator are ordered as follows:
+     * 1. TokenRefreshInterceptor - Proactively refreshes token before expiry
+     * 2. AuthInterceptor - Adds the Authorization header
+     * 3. LoggingInterceptor - Logs requests/responses
+     * 4. TokenAuthenticator - Handles 401 responses by refreshing the token
      */
     @Provides
     @Singleton
     fun provideOkHttpClient(
         loggingInterceptor: HttpLoggingInterceptor,
-        @Named("AuthInterceptor") authInterceptor: Interceptor
+        @Named("AuthInterceptor") authInterceptor: Interceptor,
+        tokenRefreshInterceptor: TokenRefreshInterceptor,
+        tokenAuthenticator: TokenAuthenticator
     ): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .addInterceptor(tokenRefreshInterceptor)
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
+            .authenticator(tokenAuthenticator)
             .build()
     }
 

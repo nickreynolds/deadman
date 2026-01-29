@@ -1721,3 +1721,48 @@ Task 131: Implement API service (Android)
 
 ## Next Task
 Task 133: Implement token refresh (Android)
+
+### Task 133: Implement token refresh (2026-01-29)
+- Created comprehensive JWT token refresh system for Android:
+  - TokenManager.kt: Interface for managing JWT token operations
+    - getToken(): Get current JWT token
+    - getTokenExpiry(): Get token expiry timestamp
+    - isTokenExpiredOrExpiring(): Check if token needs refresh (includes 5-minute buffer)
+    - updateToken(): Update stored token after refresh
+    - refreshToken(): Attempt to refresh the token via API
+    - clearAuthState(): Clear all auth state when refresh fails
+    - isAuthenticated(): Check if user has valid token
+  - TokenManagerImpl.kt: Implementation using CredentialManager
+    - Uses separate OkHttpClient for refresh to avoid circular dependency
+    - Caches AuthApiService per server URL for efficiency
+    - 5-minute buffer before expiry triggers proactive refresh
+  - TokenRefreshInterceptor.kt: OkHttp Interceptor for proactive refresh
+    - Checks token expiry before each request
+    - Skips auth/login, auth/refresh, and public endpoints
+    - Uses Mutex to prevent concurrent refresh attempts
+    - Proactively refreshes token before it expires
+  - TokenAuthenticator.kt: OkHttp Authenticator for 401 handling
+    - Handles 401 Unauthorized responses
+    - Thread-safe with Mutex to prevent multiple simultaneous refresh attempts
+    - Retry-count header to prevent infinite loops
+    - Clears auth state if refresh fails (triggers re-login)
+  - JwtUtils.kt: Utility for parsing JWT tokens
+    - parseExpiry(): Extract expiry timestamp from JWT payload
+    - parseUserInfo(): Extract user info (userId, username, isAdmin)
+    - isExpired(): Check if token is expired with optional buffer
+  - AuthModule.kt: Hilt module binding TokenManagerImpl to TokenManager interface
+- Updated NetworkModule.kt:
+  - Added TokenRefreshInterceptor and TokenAuthenticator to OkHttpClient
+  - Interceptor order: TokenRefreshInterceptor → AuthInterceptor → LoggingInterceptor
+  - TokenAuthenticator handles 401 responses
+- Created unit tests:
+  - TokenManagerTest.kt: Tests for TokenManager implementation
+    - Token retrieval, expiry checking, authentication state
+    - Error handling for missing token/server URL
+- All PRD verification steps satisfied:
+  - ✅ Token refreshed before expiration (TokenRefreshInterceptor proactive refresh)
+  - ✅ Failed refresh triggers re-login (TokenAuthenticator.clearAuthState())
+  - ✅ Refresh happens transparently (OkHttp interceptor/authenticator pattern)
+
+## Next Task
+Task 134: Create auth state ViewModel (Android)
