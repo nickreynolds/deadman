@@ -1462,5 +1462,33 @@
 - No additional code changes required - marked as FINISHED
 - Verified: pnpm run build compiles successfully, pnpm test passes (807 tests)
 
+### Task 70: Write notification service tests (2026-01-29)
+- Task verified as already complete - comprehensive tests were written during Tasks 60, 64-68 implementation
+- Notification service tests (src/services/notification.service.test.ts - 24 tests):
+  - sendCheckInReminder tests: valid payload, empty/null token, Firebase integration
+  - Firebase-enabled tests: success with messageId, null return, error handling
+  - FCM error handling: invalid token, unregistered token, network errors
+  - sendCheckInReminders tests: multiple notifications, mixed success/failure, empty array
+  - formatTimeUntilDistribution tests: days, hours, minutes, edge cases
+  - isFirebaseConfigured re-export test
+- Notification template tests (src/services/notification-templates.test.ts - 36 tests):
+  - truncateVideoTitle: max length, unicode, empty strings
+  - renderNotificationTemplate: all 4 template types (CHECK_IN_REMINDER, DISTRIBUTION_WARNING, VIDEO_DISTRIBUTED, VIDEO_EXPIRED)
+  - Helper functions: getCheckInReminderContent, getDistributionWarningContent, getVideoDistributedContent, getVideoExpiredContent
+  - shouldUseDistributionWarning: boundary conditions (24 hours)
+  - getSmartReminderContent: automatic template selection
+  - Message clarity tests: actionable instructions, urgency indicators
+  - Edge cases: special characters, empty titles, boundary times
+- Notification job tests (src/jobs/notification.job.test.ts - 15 tests):
+  - processNotifications: query parameters, FCM token handling, send success/failure
+  - notificationJobHandler: success, partial failure, critical errors
+- All PRD verification steps satisfied:
+  - ✅ Tests cover successful notification sending
+  - ✅ Tests cover invalid token handling
+  - ✅ Tests cover template generation
+  - ✅ All tests pass (807 tests total, 75 notification-related)
+- No additional code changes required - marked as FINISHED
+- Verified: pnpm run build compiles successfully, pnpm test passes (807 tests)
+
 ## Next Task
-Task 70: Write notification service tests
+Task 71: Create admin dashboard template (Admin Web Interface)
