@@ -2,7 +2,7 @@
 
 import { prisma } from '../db';
 import { createChildLogger } from '../logger';
-import type { Video, VideoStatus } from '@prisma/client';
+import type { Video, VideoStatus } from '../../prisma/generated/index';
 
 const logger = createChildLogger({ component: 'video-service' });
 

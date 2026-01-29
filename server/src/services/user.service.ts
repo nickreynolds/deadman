@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 import { prisma } from '../db';
 import { createChildLogger } from '../logger';
 import { getConfig } from '../config';
-import type { User } from '@prisma/client';
+import type { User } from '../../prisma/generated/index';
 
 const logger = createChildLogger({ component: 'user-service' });
 
