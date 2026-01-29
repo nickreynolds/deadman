@@ -1369,5 +1369,41 @@
 - No additional code changes required - marked as FINISHED
 - Verified: pnpm run build compiles successfully, pnpm test passes (730 tests)
 
+### Task 67: Create notification templates (2026-01-29)
+- Created src/services/notification-templates.ts with comprehensive notification template system:
+  - NotificationTemplateType: CHECK_IN_REMINDER, DISTRIBUTION_WARNING, VIDEO_DISTRIBUTED, VIDEO_EXPIRED
+  - NotificationTemplateContext interface with videoTitle, distributeAt, and optional now
+  - NotificationContent interface with title and body
+  - TEMPLATES constant with pre-defined notification templates:
+    - CHECK_IN_REMINDER: Standard daily reminder with video title and time until distribution
+    - DISTRIBUTION_WARNING: Urgent notification with emoji for < 24 hours until distribution
+    - VIDEO_DISTRIBUTED: Informational notification when video is distributed
+    - VIDEO_EXPIRED: Notification when distributed video expires
+  - truncateVideoTitle(): Truncates long titles with ellipsis (max 50 chars)
+  - renderNotificationTemplate(): Renders template with context, replacing placeholders
+  - getCheckInReminderContent(): Get check-in reminder content
+  - getDistributionWarningContent(): Get urgent warning content
+  - getVideoDistributedContent(): Get distribution notification content
+  - getVideoExpiredContent(): Get expiration notification content
+  - shouldUseDistributionWarning(): Determine if urgent warning should be used (< 24 hours)
+  - getSmartReminderContent(): Automatically choose appropriate template based on time
+- Templates include video title (verified)
+- Templates include time until distribution (verified via formatTimeUntilDistribution)
+- Messages are clear and actionable:
+  - CHECK_IN_REMINDER: "Tap to prevent distribution"
+  - DISTRIBUTION_WARNING: "Check in now to prevent distribution"
+  - VIDEO_DISTRIBUTED: "has been distributed to your recipients"
+  - VIDEO_EXPIRED: "has expired and is no longer accessible"
+- Created comprehensive unit tests (src/services/notification-templates.test.ts):
+  - Tests for truncateVideoTitle(): max length handling, unicode, empty strings
+  - Tests for renderNotificationTemplate(): all 4 template types
+  - Tests for helper functions: getCheckInReminderContent, getDistributionWarningContent, etc.
+  - Tests for shouldUseDistributionWarning(): boundary conditions (24 hours)
+  - Tests for getSmartReminderContent(): automatic template selection
+  - Tests for message clarity and actionability
+  - Tests for edge cases: special characters, empty titles, boundary times
+- Total: 766 tests, all passing (36 new notification template tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (766 tests)
+
 ## Next Task
-Task 67: Create notification templates
+Task 68: Add deep linking payload

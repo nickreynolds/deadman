@@ -1125,7 +1125,7 @@ Each task includes:
   - Template includes video title
   - Template includes time until distribution
   - Messages are clear and actionable
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 68: Add deep linking payload**
 - **Category:** Mobile Integration
