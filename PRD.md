@@ -1143,7 +1143,7 @@ Each task includes:
   - Token updates are saved to user record
   - Old tokens are replaced
   - Notifications use latest token
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 70: Write notification service tests**
 - **Category:** Testing

@@ -1441,5 +1441,26 @@
 - Total: 807 tests, all passing (41 new deep linking tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (807 tests)
 
+### Task 69: Handle FCM token updates (2026-01-29)
+- Task verified as already complete - FCM token update handling was implemented during Tasks 44-45
+- Implementation in PATCH /api/user/settings endpoint (src/routes/user.routes.ts):
+  - Accepts fcm_token field in request body (lines 77, 99-105)
+  - Validates fcm_token is a string if provided (or null to clear)
+  - Saves token via updateUser() service function (lines 112-114, 138)
+  - Old tokens are replaced - updateUser does full update
+- Notification job uses latest token (src/jobs/notification.job.ts):
+  - Queries user.fcmToken directly from database each time job runs (line 89)
+  - Always fetches fresh token value, ensuring notifications use current token
+- Comprehensive test coverage already exists in src/routes/user.routes.test.ts:
+  - Tests for fcm_token validation (non-string rejection, null acceptance)
+  - Tests for updating fcm_token successfully
+  - Tests for updating both default_timer_days and fcm_token together
+- All PRD verification steps satisfied:
+  - ✅ Token updates are saved to user record
+  - ✅ Old tokens are replaced
+  - ✅ Notifications use latest token
+- No additional code changes required - marked as FINISHED
+- Verified: pnpm run build compiles successfully, pnpm test passes (807 tests)
+
 ## Next Task
-Task 69: Handle FCM token updates
+Task 70: Write notification service tests
