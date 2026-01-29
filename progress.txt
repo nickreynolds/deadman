@@ -1699,5 +1699,25 @@ Task 131: Implement API service (Android)
   - Code follows Kotlin/Android best practices
   - All dependencies already present in build.gradle.kts
 
+### Task 132: Store JWT securely (2026-01-29)
+- Verified that JWT token storage in EncryptedSharedPreferences is already fully implemented
+- Implementation already present from Task 129 and Task 131:
+  - EncryptedPreferencesStorage.kt: SecureStorage implementation using EncryptedSharedPreferences
+    - Uses AES256_GCM encryption scheme with MasterKey stored in Android Keystore
+    - Hardware-backed encryption on supported devices (StrongBox or TEE)
+  - CredentialManager.kt: High-level credential management API
+    - saveAuthCredentials(): Stores JWT token, expiry, user info in secure storage
+    - getJwtToken(): Retrieves stored JWT token
+    - logout(): Clears all stored credentials (preserves server URL for convenience)
+  - LoginViewModel.kt login(): Calls credentialManager.saveAuthCredentials() on success
+  - LoginViewModel.kt init: Checks credentialManager.isAuthenticated() on app launch
+  - StorageModule.kt: Hilt binding of EncryptedPreferencesStorage to SecureStorage interface
+- All PRD verification steps satisfied:
+  - ✅ Token stored after successful login (LoginViewModel.login() → credentialManager.saveAuthCredentials())
+  - ✅ Token retrieved on app launch (LoginViewModel.init → credentialManager.isAuthenticated())
+  - ✅ Token cleared on logout (credentialManager.logout() → secureStorage.clear())
+- Comprehensive unit tests already exist in CredentialManagerTest.kt (23 tests)
+- No code changes required - marked as FINISHED
+
 ## Next Task
-Task 132: Store JWT securely (Android)
+Task 133: Implement token refresh (Android)
