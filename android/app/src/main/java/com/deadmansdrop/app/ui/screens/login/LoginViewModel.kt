@@ -2,6 +2,8 @@ package com.deadmansdrop.app.ui.screens.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.deadmansdrop.app.data.api.ApiResult
+import com.deadmansdrop.app.data.repository.AuthRepository
 import com.deadmansdrop.app.data.security.CredentialManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +34,8 @@ data class LoginUiState(
  */
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val credentialManager: CredentialManager
+    private val credentialManager: CredentialManager,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -163,8 +166,6 @@ class LoginViewModel @Inject constructor(
 
     /**
      * Attempt to log in with the current credentials.
-     * Note: Actual API call will be implemented in Task 131.
-     * For now, this validates inputs and prepares the state.
      */
     fun login() {
         if (!validateInputs()) {
@@ -176,17 +177,51 @@ class LoginViewModel @Inject constructor(
 
             try {
                 val serverUrl = normalizeServerUrl(_uiState.value.serverUrl)
+                val username = _uiState.value.username.trim()
+                val password = _uiState.value.password
 
                 // Save server URL for future use
                 credentialManager.saveServerUrl(serverUrl)
 
-                // TODO: Task 131 will implement the actual API call here
-                // For now, we just show an error message indicating API is not yet implemented
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "API service not yet implemented. Complete Task 131 to enable login."
-                    )
+                // Call the login API
+                val result = authRepository.login(
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password
+                )
+
+                when (result) {
+                    is ApiResult.Success -> {
+                        val response = result.data
+                        // Calculate token expiry (default to 24 hours if not provided)
+                        // The actual expiry should ideally be parsed from the JWT token
+                        val expiryMs = System.currentTimeMillis() + (24 * 60 * 60 * 1000L)
+
+                        // Save credentials
+                        credentialManager.saveAuthCredentials(
+                            jwtToken = response.token,
+                            jwtExpiry = expiryMs,
+                            userId = response.user.id,
+                            username = response.user.username,
+                            isAdmin = response.user.isAdmin
+                        )
+
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isLoggedIn = true,
+                                errorMessage = null
+                            )
+                        }
+                    }
+                    is ApiResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = result.message
+                            )
+                        }
+                    }
                 }
 
             } catch (e: Exception) {
