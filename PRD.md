@@ -1134,7 +1134,7 @@ Each task includes:
   - Notification payload includes video ID
   - Mobile apps can parse payload
   - Tapping notification opens correct video
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 69: Handle FCM token updates**
 - **Category:** API

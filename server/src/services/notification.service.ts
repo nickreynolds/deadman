@@ -11,8 +11,41 @@ import {
   sendFcmMessage,
   isFirebaseConfigured,
 } from './firebase.service';
+import {
+  buildCheckInReminderPayload,
+  serializeDeepLinkPayload,
+} from './deep-linking';
 
 const logger = createChildLogger({ component: 'notification-service' });
+
+/**
+ * Parse a human-readable duration string to milliseconds
+ * Used to reconstruct distributeAt from timeUntilDistribution
+ *
+ * @param duration Duration string (e.g., "2 days", "5 hours", "30 minutes", "soon")
+ * @returns Duration in milliseconds
+ */
+function parseDurationToMs(duration: string): number {
+  const match = duration.match(/^(\d+)\s+(day|hour|minute)s?$/);
+  if (!match || !match[1] || !match[2]) {
+    // Default to 1 hour for "soon" or unrecognized formats
+    return 60 * 60 * 1000;
+  }
+
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+
+  switch (unit) {
+    case 'day':
+      return value * 24 * 60 * 60 * 1000;
+    case 'hour':
+      return value * 60 * 60 * 1000;
+    case 'minute':
+      return value * 60 * 1000;
+    default:
+      return 60 * 60 * 1000;
+  }
+}
 
 /**
  * Notification payload for check-in reminders
@@ -28,6 +61,8 @@ export interface CheckInReminderPayload {
   videoTitle: string;
   /** Time until distribution (in hours or days) */
   timeUntilDistribution: string;
+  /** Distribution timestamp (optional, for deep linking) */
+  distributeAt?: Date;
 }
 
 /**
@@ -89,6 +124,20 @@ export async function sendCheckInReminder(
   }
 
   try {
+    // Build deep link payload for mobile app navigation (PRD Task 68)
+    // This payload allows mobile apps to navigate directly to the video
+    // when the notification is tapped
+    const actualDistributeAt = payload.distributeAt ||
+      new Date(Date.now() + parseDurationToMs(timeUntilDistribution));
+
+    const deepLinkPayload = buildCheckInReminderPayload(
+      videoId,
+      userId,
+      videoTitle,
+      actualDistributeAt,
+      timeUntilDistribution
+    );
+
     // Build notification message
     const messageId = await sendFcmMessage({
       token: fcmToken,
@@ -96,12 +145,8 @@ export async function sendCheckInReminder(
         title: 'Check-In Reminder',
         body: `Your video "${videoTitle}" will be distributed in ${timeUntilDistribution}. Tap to prevent distribution.`,
       },
-      data: {
-        type: 'CHECK_IN_REMINDER',
-        videoId,
-        userId,
-        action: 'OPEN_VIDEO',
-      },
+      // Serialize deep link payload for FCM (all values must be strings)
+      data: serializeDeepLinkPayload(deepLinkPayload),
       android: {
         priority: 'high',
         ttl: 86400, // 24 hours

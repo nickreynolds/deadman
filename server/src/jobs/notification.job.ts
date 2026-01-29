@@ -125,6 +125,7 @@ export async function processNotifications(now?: Date): Promise<NotificationJobR
           videoId: video.id,
           videoTitle: video.title,
           timeUntilDistribution: formatTimeUntilDistribution(video.distributeAt, currentTime),
+          distributeAt: video.distributeAt, // For deep linking (PRD Task 68)
         };
 
         const sendResult: NotificationResult = await sendCheckInReminder(payload);

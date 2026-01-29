@@ -117,6 +117,7 @@ describe('Notification Job', () => {
         videoId: 'video-1',
         videoTitle: 'Test Video',
         timeUntilDistribution: '2 days',
+        distributeAt: new Date('2026-01-30T00:00:00Z'), // PRD Task 68: Include for deep linking
       });
     });
 

@@ -1405,5 +1405,41 @@
 - Total: 766 tests, all passing (36 new notification template tests)
 - Verified: pnpm run build compiles successfully, pnpm test passes (766 tests)
 
+### Task 68: Add deep linking payload (2026-01-29)
+- Created src/services/deep-linking.ts with comprehensive deep linking functionality:
+  - DeepLinkAction constants: OPEN_VIDEO, OPEN_VIDEO_LIST, OPEN_SETTINGS, OPEN_CHECK_IN
+  - NotificationType constants: CHECK_IN_REMINDER, DISTRIBUTION_WARNING, VIDEO_DISTRIBUTED, VIDEO_EXPIRED
+  - DeepLinkPayload interface with type, videoId, userId, action, and optional fields
+  - buildCheckInReminderPayload(): Build payload for daily check-in reminders
+  - buildDistributionWarningPayload(): Build payload for urgent warnings (uses OPEN_CHECK_IN action)
+  - buildVideoDistributedPayload(): Build payload for distribution notifications
+  - buildVideoExpiredPayload(): Build payload for expiration notifications (uses OPEN_VIDEO_LIST action)
+  - serializeDeepLinkPayload(): Convert payload to FCM-compatible Record<string, string>
+  - isValidDeepLinkPayload(): Validate payload structure for testing/debugging
+- Updated src/services/notification.service.ts:
+  - Added parseDurationToMs() helper to reconstruct distributeAt from timeUntilDistribution
+  - Updated CheckInReminderPayload interface with optional distributeAt field
+  - sendCheckInReminder() now uses deep linking module to build FCM data payload
+  - Deep link payload includes videoId, userId, type, action, videoTitle, distributeAt, timeUntilDistribution
+- Updated src/jobs/notification.job.ts:
+  - CheckInReminderPayload now includes distributeAt date for accurate deep linking
+- Notification payload structure documented with mobile app examples:
+  - Android: Parse from RemoteMessage.getData() Map<String, String>
+  - iOS: Parse from userInfo dictionary [AnyHashable: Any]
+  - Actions map to specific screens: OPEN_VIDEO → video detail, OPEN_CHECK_IN → check-in confirmation
+- Created comprehensive unit tests (src/services/deep-linking.test.ts):
+  - Tests for DeepLinkAction and NotificationType constants (8 tests)
+  - Tests for buildCheckInReminderPayload(): all fields, video ID for deep linking (3 tests)
+  - Tests for buildDistributionWarningPayload(): all fields, OPEN_CHECK_IN action (3 tests)
+  - Tests for buildVideoDistributedPayload(): all fields, no distributeAt (3 tests)
+  - Tests for buildVideoExpiredPayload(): all fields, OPEN_VIDEO_LIST action (2 tests)
+  - Tests for serializeDeepLinkPayload(): required/optional fields, FCM compatibility (4 tests)
+  - Tests for isValidDeepLinkPayload(): valid payloads, all types/actions, null/undefined, invalid fields (13 tests)
+  - Tests for mobile app parsing examples: Android and iOS scenarios (2 tests)
+  - Tests for deep link integration scenarios (3 tests)
+- Updated notification job test to expect distributeAt in payload
+- Total: 807 tests, all passing (41 new deep linking tests)
+- Verified: pnpm run build compiles successfully, pnpm test passes (807 tests)
+
 ## Next Task
-Task 68: Add deep linking payload
+Task 69: Handle FCM token updates
