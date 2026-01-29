@@ -10,14 +10,14 @@ const dbLogger = createChildLogger({ component: 'database' });
 // Lazily-created singleton Prisma client
 // This avoids calling getConfig() at module load time, which can run
 // before initializeConfig() has been called in the application entrypoint.
-let prisma: PrismaClient | null = null;
+let prismaInstance: PrismaClient | null = null;
 let loggingConfigured = false;
 
 function getPrismaClient(): PrismaClient {
-  if (!prisma) {
+  if (!prismaInstance) {
     const config = getConfig();
 
-    prisma = new PrismaClient({
+    prismaInstance = new PrismaClient({
       log: config.isDevelopment
         ? [
           { emit: 'event', level: 'query' },
@@ -33,35 +33,45 @@ function getPrismaClient(): PrismaClient {
   }
 
   // Configure logging once, after the client is created
-  if (!loggingConfigured && prisma) {
+  if (!loggingConfigured && prismaInstance) {
     const config = getConfig();
 
     // if (config.isDevelopment) {
-    //   prisma.$on('query', (e) => {
+    //   prismaInstance.$on('query', (e) => {
     //     dbLogger.debug(
     //       { query: e.query, params: e.params, duration: e.duration },
     //       'Database query'
     //     );
     //   });
 
-    //   prisma.$on('info', (e) => {
+    //   prismaInstance.$on('info', (e) => {
     //     dbLogger.info({ message: e.message }, 'Prisma info');
     //   });
     // }
 
-    // prisma.$on('warn', (e) => {
+    // prismaInstance.$on('warn', (e) => {
     //   dbLogger.warn({ message: e.message }, 'Prisma warning');
     // });
 
-    // prisma.$on('error', (e) => {
+    // prismaInstance.$on('error', (e) => {
     //   dbLogger.error({ message: e.message }, 'Prisma error');
     // });
 
     loggingConfigured = true;
   }
 
-  return prisma;
+  return prismaInstance;
 }
+
+/**
+ * Prisma client accessor. Use this as you would a normal PrismaClient
+ * (e.g. prisma.user.findMany()). The client is created lazily on first use.
+ */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_, prop) {
+    return (getPrismaClient() as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
 
 /**
  * Connect to the database
@@ -83,10 +93,9 @@ export async function connectDatabase(): Promise<void> {
  * Should be called during graceful shutdown
  */
 export async function disconnectDatabase(): Promise<void> {
-  if (prisma) {
-    await prisma.$disconnect();
+  if (prismaInstance) {
+    await prismaInstance.$disconnect();
     dbLogger.info('Database connection closed');
   }
 }
 
-export { getPrismaClient as prisma };
