@@ -25,7 +25,8 @@ import javax.inject.Singleton
 class TokenManagerImpl @Inject constructor(
     private val credentialManager: CredentialManager,
     private val gson: Gson,
-    private val loggingInterceptor: HttpLoggingInterceptor
+    private val loggingInterceptor: HttpLoggingInterceptor,
+    private val authStateManager: AuthStateManager
 ) : TokenManager {
 
     companion object {
@@ -88,6 +89,8 @@ class TokenManagerImpl @Inject constructor(
         credentialManager.logout()
         cachedAuthService = null
         cachedServerUrl = null
+        // Notify UI components that user has been logged out
+        authStateManager.notifyLoggedOut()
     }
 
     override fun isAuthenticated(): Boolean {

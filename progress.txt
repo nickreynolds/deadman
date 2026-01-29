@@ -1766,3 +1766,38 @@ Task 133: Implement token refresh (Android)
 
 ## Next Task
 Task 134: Create auth state ViewModel (Android)
+
+### Task 134: Create auth state ViewModel (2026-01-29)
+- Created app-wide authentication state management using ViewModel:
+  - AuthViewModel.kt: HiltViewModel for managing app-wide auth state
+    - Uses StateFlow<AuthState> for reactive state management
+    - AuthState data class tracks: isAuthenticated, isLoading, userId, username, isAdmin
+    - checkAuthState(): Verifies credentials via CredentialManager
+    - onLoginSuccess(): Called after successful login to update state
+    - logout(): Clears credentials and updates auth state
+    - observeAuthStateChanges(): Listens for auth events from AuthStateManager
+  - AuthStateManager.kt: Singleton for broadcasting auth state changes
+    - Uses SharedFlow to emit AuthEvent sealed class
+    - AuthEvent.LoggedOut: User has been logged out (token refresh failed or explicit logout)
+    - AuthEvent.TokenRefreshed: Token was successfully refreshed
+    - notifyLoggedOut(): Called by TokenManagerImpl when refresh fails
+    - notifyTokenRefreshed(): Called when token is successfully refreshed
+- Updated TokenManagerImpl.kt:
+  - Added AuthStateManager dependency injection
+  - clearAuthState() now calls authStateManager.notifyLoggedOut()
+  - This ensures UI is notified when token refresh fails
+- Updated DeadmansDropApp.kt:
+  - Uses AuthViewModel via hiltViewModel() instead of simple mutableStateOf
+  - Shows loading indicator while checking auth state
+  - Reacts to auth state changes (including logout from token refresh failure)
+  - Passes onLogout callback to MainAppContent
+- Updated MainAppContent composable:
+  - Displays welcome message with username
+  - Added Logout button that calls authViewModel.logout()
+- All PRD verification steps satisfied:
+  - ✅ Login state persists across config changes (StateFlow in ViewModel)
+  - ✅ UI reacts to auth state changes (collectAsState() in DeadmansDropApp)
+  - ✅ Logout clears all auth state (logout() in AuthViewModel + CredentialManager)
+
+## Next Task
+Task 135: Create camera view (Android)

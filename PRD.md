@@ -1771,7 +1771,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Login state persists across config changes
   - UI reacts to auth state changes
   - Logout clears all auth state
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.3.3 Android Video Recording
 
