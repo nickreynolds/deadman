@@ -1,0 +1,315 @@
+{
+  "info": {
+    "name": "Deadman's Drop API",
+    "description": "API collection for the Deadman's Drop server. Set the `baseUrl` variable (e.g. `http://localhost:3000`) and use **Login** to get a token; authenticated requests use the `token` variable automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" },
+    { "key": "videoId", "value": "", "description": "Video UUID for video endpoints" },
+    { "key": "publicToken", "value": "", "description": "Public token for /api/public/videos/:token" },
+    { "key": "recipientId", "value": "", "description": "Recipient UUID for delete recipient" },
+    { "key": "userId", "value": "", "description": "User UUID for admin user endpoints" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "description": "Returns server status and timestamp. No authentication required."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.token) {",
+                  "        pm.collectionVariables.set('token', json.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"your-password\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Authenticate with username and password. Returns JWT token and user info. The token is automatically saved to the collection variable `token` for use in other requests."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{token}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "description": "Refresh the JWT token. Pass the current token in the body; returns a new token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Videos",
+      "item": [
+        {
+          "name": "Upload Video",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "video", "type": "file", "src": "", "description": "Video file (required)" },
+                { "key": "title", "value": "", "type": "text", "description": "Optional title (auto-generated if empty)" },
+                { "key": "location", "value": "", "type": "text", "description": "Optional location for auto-generated title" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/videos/upload",
+            "description": "Upload a video file. Requires authentication. Optional: title, location."
+          }
+        },
+        {
+          "name": "List Videos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/videos?limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "videos"],
+              "query": [
+                { "key": "status", "value": "ACTIVE", "disabled": true, "description": "PENDING | ACTIVE | DISTRIBUTED | EXPIRED" },
+                { "key": "limit", "value": "50" },
+                { "key": "offset", "value": "0" }
+              ]
+            },
+            "description": "List the authenticated user's videos. Optional query: status, limit (max 100), offset."
+          }
+        },
+        {
+          "name": "Get Video",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/videos/{{videoId}}",
+            "description": "Get metadata for a specific video by ID. Requires ownership."
+          }
+        },
+        {
+          "name": "Update Video",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My Updated Video Title\"\n}"
+            },
+            "url": "{{baseUrl}}/api/videos/{{videoId}}",
+            "description": "Update video metadata (currently only title)."
+          }
+        },
+        {
+          "name": "Delete Video",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/videos/{{videoId}}",
+            "description": "Delete a video and free storage. Requires ownership."
+          }
+        },
+        {
+          "name": "Check-in (Prevent/Allow Distribution)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"PREVENT_DISTRIBUTION\"\n}"
+            },
+            "url": "{{baseUrl}}/api/videos/{{videoId}}/checkin",
+            "description": "Perform check-in on an ACTIVE video. Action: PREVENT_DISTRIBUTION or ALLOW_DISTRIBUTION. Resets/extends the distribution timer."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Get Video by Public Token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/public/videos/{{publicToken}}",
+            "description": "Download a distributed video by its public token. No auth. Optional header: Range (bytes=start-end) for partial content."
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/settings",
+            "description": "Get current user settings: default_timer_days, storage_quota_bytes, storage_used_bytes, fcm_token."
+          }
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"default_timer_days\": 7,\n  \"fcm_token\": \"\"\n}"
+            },
+            "url": "{{baseUrl}}/api/user/settings",
+            "description": "Update user settings. Optional: default_timer_days (1-365), fcm_token."
+          }
+        },
+        {
+          "name": "List Recipients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/recipients",
+            "description": "Get the user's distribution recipients."
+          }
+        },
+        {
+          "name": "Add Recipient",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recipient@example.com\",\n  \"name\": \"Recipient Name\"\n}"
+            },
+            "url": "{{baseUrl}}/api/user/recipients",
+            "description": "Add a distribution recipient. Email required, name optional."
+          }
+        },
+        {
+          "name": "Delete Recipient",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/recipients/{{recipientId}}",
+            "description": "Remove a distribution recipient by ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newuser\",\n  \"password\": \"securepassword\",\n  \"is_admin\": false,\n  \"storage_quota_bytes\": 5368709120\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/users",
+            "description": "Create a new user. Admin only. Username (3-50 chars), password (min 8 chars), optional is_admin, storage_quota_bytes."
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/users",
+            "description": "List all users. Admin only."
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_admin\": false,\n  \"storage_quota_bytes\": 10737418240\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/users/{{userId}}",
+            "description": "Update user properties. Admin only. Optional: is_admin, storage_quota_bytes."
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/users/{{userId}}",
+            "description": "Delete a user and associated data. Admin only."
+          }
+        },
+        {
+          "name": "Get System Config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/config",
+            "description": "Get system configuration. Admin only."
+          }
+        },
+        {
+          "name": "Update System Config",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"some_key\": \"some_value\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/config",
+            "description": "Update system configuration. Admin only. Body: key-value pairs (values must be strings)."
+          }
+        }
+      ]
+    }
+  ]
+}
