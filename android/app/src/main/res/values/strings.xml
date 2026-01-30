@@ -11,4 +11,17 @@
     <string name="login_button">Log In</string>
     <string name="login_show_password">Show password</string>
     <string name="login_hide_password">Hide password</string>
+
+    <!-- Camera Screen -->
+    <string name="camera_close">Close camera</string>
+    <string name="camera_switch">Switch camera</string>
+    <string name="camera_permission_title">Camera Permission Required</string>
+    <string name="camera_permission_rationale">Deadman\'s Drop needs access to your camera and microphone to record videos. These permissions are required for the app to function.</string>
+    <string name="camera_permission_denied_title">Permission Denied</string>
+    <string name="camera_permission_denied_message">Camera and microphone permissions have been denied. Please enable them in your device settings to use this feature.</string>
+    <string name="camera_grant_permission">Grant Permission</string>
+    <string name="camera_go_back">Go Back</string>
+
+    <!-- Main Screen -->
+    <string name="main_record_video">Record Video</string>
 </resources>
