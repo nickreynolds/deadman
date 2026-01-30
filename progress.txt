@@ -1912,3 +1912,39 @@ Task 137: Save video to storage (Android)
 
 ## Next Task
 Task 138: Handle camera permissions (Android)
+
+### Task 138: Handle camera permissions (2026-01-30)
+- Task verified as already complete - permission handling was implemented during Task 135/136
+- Implementation in CameraScreen.kt:
+  - rememberMultiplePermissionsState (lines 84-89):
+    - Requests CAMERA and RECORD_AUDIO permissions
+    - Uses Accompanist Permissions API for Compose
+  - LaunchedEffect for permission updates (lines 92-97):
+    - Calls viewModel.onPermissionsResult() with granted/rationale state
+  - LaunchedEffect for first launch (lines 99-104):
+    - Automatically requests permissions if not already granted
+  - Permission-based UI (lines 131-161):
+    - hasPermissions true: Shows CameraPreviewContent with recording controls
+    - showPermissionRationale true: Shows PermissionRationaleContent
+    - Otherwise: Shows PermissionDeniedContent
+  - PermissionRationaleContent composable (lines 424-464):
+    - Explains why permissions are needed
+    - Provides "Grant Permission" button to retry request
+    - Provides "Go Back" button to close camera
+  - PermissionDeniedContent composable (lines 469-501):
+    - Informs user permissions were permanently denied
+    - Provides instructions to enable in settings
+- Implementation in CameraViewModel.kt:
+  - onPermissionsResult() method (lines 77-84):
+    - Updates hasPermissions and showPermissionRationale state
+  - startRecording() checks RECORD_AUDIO permission (lines 196-202):
+    - Only enables audio if permission granted
+    - Falls back to video-only recording if audio denied
+- All PRD verification steps satisfied:
+  - ✅ Permission request on first camera use (LaunchedEffect on mount)
+  - ✅ Denied permission shows rationale (PermissionRationaleContent composable)
+  - ✅ Permission state checked before recording (UI only shows when hasPermissions is true)
+- No code changes required - marked as FINISHED in PRD
+
+## Next Task
+Task 139: Display recording info (Android)

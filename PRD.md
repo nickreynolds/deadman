@@ -1809,7 +1809,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Permission request on first camera use
   - Denied permission shows rationale
   - Permission state checked before recording
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 139: Display recording info**
 - **Category:** UI
