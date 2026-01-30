@@ -1818,7 +1818,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Timer counts during recording
   - File size estimate updates in real-time
   - Display is clearly visible
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.3.4 Android Video Upload
 

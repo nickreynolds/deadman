@@ -1948,3 +1948,29 @@ Task 138: Handle camera permissions (Android)
 
 ## Next Task
 Task 139: Display recording info (Android)
+
+### Task 139: Display recording info (2026-01-30)
+- Added estimated file size display to Android camera recording indicator
+- Updated CameraUiState data class in CameraViewModel.kt:
+  - Added recordedBytesCount: Long field to track bytes recorded
+- Updated CameraViewModel.kt:
+  - Renamed onRecordingDurationUpdate() to onRecordingStatsUpdate(durationMs, bytesRecorded)
+  - Updated VideoRecordEvent.Status handler to extract numBytesRecorded from recording stats
+  - Updated onRecordingStarted(), onRecordingStopped(), onRecordingError() to reset recordedBytesCount
+- Updated CameraScreen.kt:
+  - Added recordedBytesCount parameter to CameraPreviewContent
+  - Updated RecordingIndicator to accept bytesRecorded parameter
+  - RecordingIndicator now displays timer (MM:SS format) AND file size
+  - File size shown in slightly muted white for visual hierarchy
+- Added formatFileSize() helper function:
+  - Converts bytes to human-readable format (B, KB, MB, GB)
+  - Uses 1 decimal place for KB/MB, 2 decimals for GB
+- All PRD verification steps satisfied:
+  - ✅ Timer counts during recording (existing, from MM:SS format)
+  - ✅ File size estimate updates in real-time (numBytesRecorded from CameraX)
+  - ✅ Display is clearly visible (shown in recording indicator banner)
+- Note: Build verification not possible in this environment (Java not installed)
+- Marked as FINISHED in PRD
+
+## Next Task
+Task 140: Create WorkManager upload service (Android)

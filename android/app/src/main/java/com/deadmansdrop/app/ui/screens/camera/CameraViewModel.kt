@@ -49,6 +49,7 @@ data class CameraUiState(
     val showPermissionRationale: Boolean = false,
     val errorMessage: String? = null,
     val recordingDurationMs: Long = 0L,
+    val recordedBytesCount: Long = 0L,
     val recordedFilePath: String? = null
 )
 
@@ -134,16 +135,22 @@ class CameraViewModel @Inject constructor(
             it.copy(
                 isRecording = true,
                 errorMessage = null,
-                recordingDurationMs = 0L
+                recordingDurationMs = 0L,
+                recordedBytesCount = 0L
             )
         }
     }
 
     /**
-     * Update recording duration.
+     * Update recording duration and file size.
      */
-    fun onRecordingDurationUpdate(durationMs: Long) {
-        _uiState.update { it.copy(recordingDurationMs = durationMs) }
+    fun onRecordingStatsUpdate(durationMs: Long, bytesRecorded: Long) {
+        _uiState.update {
+            it.copy(
+                recordingDurationMs = durationMs,
+                recordedBytesCount = bytesRecorded
+            )
+        }
     }
 
     /**
@@ -162,7 +169,8 @@ class CameraViewModel @Inject constructor(
             it.copy(
                 isRecording = false,
                 recordedFilePath = filePath,
-                recordingDurationMs = 0L
+                recordingDurationMs = 0L,
+                recordedBytesCount = 0L
             )
         }
     }
@@ -232,7 +240,8 @@ class CameraViewModel @Inject constructor(
             it.copy(
                 isRecording = false,
                 errorMessage = message,
-                recordingDurationMs = 0L
+                recordingDurationMs = 0L,
+                recordedBytesCount = 0L
             )
         }
     }
@@ -261,7 +270,10 @@ class CameraViewModel @Inject constructor(
             }
             is VideoRecordEvent.Status -> {
                 val stats = event.recordingStats
-                onRecordingDurationUpdate(stats.recordedDurationNanos / 1_000_000)
+                onRecordingStatsUpdate(
+                    durationMs = stats.recordedDurationNanos / 1_000_000,
+                    bytesRecorded = stats.numBytesRecorded
+                )
             }
             is VideoRecordEvent.Finalize -> {
                 if (event.hasError()) {

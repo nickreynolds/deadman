@@ -136,6 +136,7 @@ fun CameraScreen(
                         isRecording = uiState.isRecording,
                         recordingState = recordingState,
                         recordingDurationMs = uiState.recordingDurationMs,
+                        recordedBytesCount = uiState.recordedBytesCount,
                         onToggleCamera = viewModel::toggleCamera,
                         onStartRecording = { videoCapture ->
                             viewModel.startRecording(videoCapture)
@@ -172,6 +173,7 @@ private fun CameraPreviewContent(
     isRecording: Boolean,
     recordingState: RecordingState,
     recordingDurationMs: Long,
+    recordedBytesCount: Long,
     onToggleCamera: () -> Unit,
     onStartRecording: (VideoCapture<Recorder>) -> Unit,
     onStopRecording: () -> Unit,
@@ -286,7 +288,10 @@ private fun CameraPreviewContent(
 
             // Recording indicator
             if (isRecording) {
-                RecordingIndicator(durationMs = recordingDurationMs)
+                RecordingIndicator(
+                    durationMs = recordingDurationMs,
+                    bytesRecorded = recordedBytesCount
+                )
             }
 
             // Camera switch button (only show if not recording)
@@ -333,13 +338,14 @@ private fun CameraPreviewContent(
 }
 
 /**
- * Recording indicator showing a red dot and duration timer.
+ * Recording indicator showing a red dot, duration timer, and estimated file size.
  */
 @Composable
-private fun RecordingIndicator(durationMs: Long) {
+private fun RecordingIndicator(durationMs: Long, bytesRecorded: Long) {
     val seconds = (durationMs / 1000) % 60
     val minutes = (durationMs / 1000) / 60
     val timeString = String.format("%02d:%02d", minutes, seconds)
+    val fileSizeString = formatFileSize(bytesRecorded)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -362,6 +368,24 @@ private fun RecordingIndicator(durationMs: Long) {
             color = Color.White,
             style = MaterialTheme.typography.bodyMedium
         )
+        Spacer(modifier = Modifier.size(12.dp))
+        Text(
+            text = fileSizeString,
+            color = Color.White.copy(alpha = 0.7f),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+/**
+ * Format bytes into human-readable file size string.
+ */
+private fun formatFileSize(bytes: Long): String {
+    return when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> String.format("%.1f KB", bytes / 1024.0)
+        bytes < 1024 * 1024 * 1024 -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+        else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
     }
 }
 
