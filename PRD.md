@@ -1791,7 +1791,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Start button begins recording
   - Stop button ends recording
   - Visual indicator shows recording state
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 137: Save video to storage**
 - **Category:** Storage

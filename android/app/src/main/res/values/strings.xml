@@ -15,6 +15,9 @@
     <!-- Camera Screen -->
     <string name="camera_close">Close camera</string>
     <string name="camera_switch">Switch camera</string>
+    <string name="camera_start_recording">Start recording</string>
+    <string name="camera_stop_recording">Stop recording</string>
+    <string name="camera_recording">Recording</string>
     <string name="camera_permission_title">Camera Permission Required</string>
     <string name="camera_permission_rationale">Deadman\'s Drop needs access to your camera and microphone to record videos. These permissions are required for the app to function.</string>
     <string name="camera_permission_denied_title">Permission Denied</string>
