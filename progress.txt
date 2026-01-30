@@ -1974,3 +1974,38 @@ Task 139: Display recording info (Android)
 
 ## Next Task
 Task 140: Create WorkManager upload service (Android)
+
+### Task 140 & 141: Create WorkManager upload service & Implement multipart upload (2026-01-30)
+- Created VideoModels.kt with API response models:
+  - VideoResponse: Complete video metadata from server
+  - VideoUploadResponse: Response from upload endpoint
+  - VideoListResponse, VideoDetailResponse, VideoDeleteResponse
+  - VideoStatus enum matching server-side status values
+- Created VideoApiService.kt:
+  - Retrofit interface for POST /api/videos/upload
+  - Multipart form-data upload with video file and optional title
+- Created VideoUploadRepository.kt:
+  - WorkManager-based upload scheduling
+  - scheduleUpload() queues video for background upload
+  - getUploadStatus() returns Flow for observing upload state
+  - getAllUploads(), getPendingUploads(), getRunningUploads() for monitoring
+  - cancelUpload() and cancelAllUploads() for cancellation
+  - uploadVideoDirect() for immediate uploads without WorkManager
+- Created VideoUploadWorker.kt:
+  - @HiltWorker for dependency injection
+  - Foreground service notification during upload
+  - Automatic retry on network/server errors (up to 3 attempts)
+  - Cleans up local video file after successful upload
+  - Proper error handling and notification updates
+  - Uses FOREGROUND_SERVICE_TYPE_DATA_SYNC for Android 10+
+- Updated DeadmansDropApplication.kt:
+  - Implemented Configuration.Provider for WorkManager
+  - Injected HiltWorkerFactory for dependency injection in Workers
+- Updated AndroidManifest.xml:
+  - Disabled default WorkManager initialization
+  - Added androidx.startup InitializationProvider configuration
+- Verification:
+  - All files follow existing project patterns
+  - Proper Hilt injection setup for Workers
+  - Network constraints ensure upload only when connected
+  - Upload survives app restart via WorkManager persistence

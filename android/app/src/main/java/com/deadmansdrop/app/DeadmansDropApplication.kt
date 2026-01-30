@@ -4,19 +4,34 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
 /**
  * Main Application class for Deadman's Drop.
- * Initializes Hilt dependency injection and notification channels.
+ * Initializes Hilt dependency injection, WorkManager, and notification channels.
  */
 @HiltAndroidApp
-class DeadmansDropApplication : Application() {
+class DeadmansDropApplication : Application(), Configuration.Provider {
+
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
     }
+
+    /**
+     * Provides WorkManager configuration with HiltWorkerFactory.
+     * This enables dependency injection in WorkManager Workers.
+     */
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
