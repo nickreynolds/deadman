@@ -1887,3 +1887,28 @@ Task 136: Implement recording controls (Android)
 
 ## Next Task
 Task 137: Save video to storage (Android)
+
+### Task 137: Save video to storage (2026-01-30)
+- Task verified as already complete - video storage was implemented during Task 136
+- Implementation in CameraViewModel.kt:
+  - startRecording() method (lines 174-213):
+    - Creates video directory: File(context.filesDir, "videos")
+    - Uses mkdirs() to ensure directory exists
+    - Generates timestamped filename: "deadman_yyyy-MM-dd-HH-mm-ss-SSS.mp4"
+    - Uses FileOutputOptions.Builder for CameraX video output
+  - handleVideoRecordEvent() method (lines 257-288):
+    - Handles VideoRecordEvent.Finalize for recording completion
+    - On success: calls onRecordingStopped(outputFile.absolutePath)
+    - On error: cleans up failed recording file and reports error
+    - Handles specific errors: insufficient storage, size limit, encoding failure
+  - createOutputOptions() helper method (lines 108-119):
+    - Alternative method for creating output options
+    - Same storage pattern as startRecording()
+- All PRD verification steps satisfied:
+  - ✅ Video file saved after recording stops (handleVideoRecordEvent calls onRecordingStopped with file path)
+  - ✅ File format is MP4 (filename uses .mp4 extension)
+  - ✅ Files stored in correct directory (context.filesDir/videos/ - app-specific storage)
+- No code changes required - marked as FINISHED in PRD
+
+## Next Task
+Task 138: Handle camera permissions (Android)

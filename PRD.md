@@ -1800,7 +1800,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Video file saved after recording stops
   - File format is MP4
   - Files stored in correct directory
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 138: Handle camera permissions**
 - **Category:** Permissions
