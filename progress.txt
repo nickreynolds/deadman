@@ -2204,3 +2204,36 @@ Task 140: Create WorkManager upload service (Android)
   - Error handling: YES (error state with retry hint)
   - Status indicators: YES (color-coded chips for each video status)
   - Relative time formatting: YES (e.g., "2 days ago", "in 3 hours")
+
+### Task 149: Fetch videos from API (2026-01-31)
+- **Category:** Networking
+- **Description:** Retrieve videos from GET /api/videos endpoint
+
+- **Status:** FINISHED (was already implemented as part of Task 148)
+
+- **Implementation Details:**
+  This task was found to be already fully implemented when Task 148 was completed. The implementation includes:
+  
+  1. **VideoApiService** (VideoApiService.kt:43-48):
+     - `getVideos()` endpoint defined with `@GET("api/videos")`
+     - Query parameters: `status` (optional filter), `limit` (default 50), `offset` (default 0)
+     
+  2. **VideoRepository** (VideoRepository.kt:31-44):
+     - `getVideos()` method wraps API call with `ApiClient.safeApiCall`
+     - Returns `ApiResult<VideoListResponse>` for error handling
+     - Supports status filtering and pagination
+     
+  3. **VideoListViewModel** (VideoListViewModel.kt:47-73, 80-107):
+     - `loadVideos()` shows loading indicator, updates state on success/error
+     - `refreshVideos()` shows refresh indicator for pull-to-refresh
+     - Prevents duplicate calls with `isLoading`/`isRefreshing` guards
+     
+  4. **VideoListScreen** (VideoListScreen.kt:51-146):
+     - Collects state from ViewModel via `collectAsState()`
+     - Displays appropriate UI for: loading, error, empty, and video list states
+     - `PullToRefreshBox` triggers `viewModel.refreshVideos()`
+
+- **Verification:**
+  - Videos fetched on screen load: YES (ViewModel.init calls loadVideos())
+  - Loading state shown during fetch: YES (CircularProgressIndicator when isLoading && videos.isEmpty())
+  - Errors handled gracefully: YES (Error message with "Pull down to retry" hint)

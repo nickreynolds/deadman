@@ -1912,7 +1912,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Videos fetched on screen load
   - Loading state shown during fetch
   - Errors handled gracefully
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 150: Display video info**
 - **Category:** UI
