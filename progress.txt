@@ -2057,3 +2057,35 @@ Task 140: Create WorkManager upload service (Android)
   - Other 4xx: Don't retry (client error won't change)
 - Persistent failures show user-friendly notification messages
 - Verified: Code compiles correctly (manual review - no Java runtime in environment)
+
+### Task 144: Support foreground service (2026-01-31)
+- **Already implemented** - Verified that the foreground service notification is already fully functional:
+  - VideoUploadWorker.kt calls `setForeground(createForegroundInfo())` to show a persistent notification during upload
+  - Uses `ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC` for Android Q+
+  - Notification channel `CHANNEL_UPLOAD_PROGRESS` is configured in DeadmansDropApplication
+  - AndroidManifest.xml declares `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_DATA_SYNC` permissions
+  - Notification updates show progress percentage during upload
+  - Notification is updated to success/failure state on completion (auto-cancelable)
+- No changes required - task was already complete
+
+### Task 145: Implement video title prompt (2026-01-31)
+- Created VideoTitleDialog composable:
+  - AlertDialog with optional title text field
+  - "Upload" button to confirm with title
+  - "Skip" button to upload without title (auto-generate)
+  - Handles dismiss event to still upload the video
+- Added string resources in strings.xml:
+  - video_title_dialog_title: "Add Video Title"
+  - video_title_dialog_message: Explanation about auto-generation
+  - video_title_dialog_hint: "Video title"
+  - video_title_dialog_save: "Upload"
+  - video_title_dialog_skip: "Skip"
+- Integrated title dialog into DeadmansDropApp:
+  - Added `pendingVideoPath` state to track video awaiting title
+  - CameraScreen's `onVideoRecorded` now sets `pendingVideoPath` instead of directly uploading
+  - VideoTitleDialog appears when `pendingVideoPath` is set
+  - Title (or null) is passed to `uploadViewModel.scheduleUpload()`
+- Files modified:
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/camera/VideoTitleDialog.kt (new)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt
+  - android/app/src/main/res/values/strings.xml

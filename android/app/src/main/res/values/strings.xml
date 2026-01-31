@@ -25,6 +25,13 @@
     <string name="camera_grant_permission">Grant Permission</string>
     <string name="camera_go_back">Go Back</string>
 
+    <!-- Video Title Dialog -->
+    <string name="video_title_dialog_title">Add Video Title</string>
+    <string name="video_title_dialog_message">Give your video a title, or skip to auto-generate one based on the date and time.</string>
+    <string name="video_title_dialog_hint">Video title</string>
+    <string name="video_title_dialog_save">Upload</string>
+    <string name="video_title_dialog_skip">Skip</string>
+
     <!-- Main Screen -->
     <string name="main_record_video">Record Video</string>
 </resources>

@@ -1865,7 +1865,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Notification shown during upload
   - Upload continues in background
   - Notification dismissed on completion
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 145: Implement video title prompt**
 - **Category:** UI
@@ -1874,7 +1874,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Title dialog appears after recording
   - User can skip title entry
   - Title included in upload
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 146: Auto-generate titles**
 - **Category:** Business Logic

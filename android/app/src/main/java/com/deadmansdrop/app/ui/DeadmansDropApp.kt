@@ -36,6 +36,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.deadmansdrop.app.R
 import com.deadmansdrop.app.ui.auth.AuthViewModel
 import com.deadmansdrop.app.ui.screens.camera.CameraScreen
+import com.deadmansdrop.app.ui.screens.camera.VideoTitleDialog
 import com.deadmansdrop.app.ui.screens.login.LoginScreen
 import com.deadmansdrop.app.ui.screens.upload.UploadProgressList
 import com.deadmansdrop.app.ui.screens.upload.UploadStatus
@@ -104,6 +105,8 @@ private fun MainAppContent(
     // Track whether upload progress sheet is shown
     var showUploadSheet by rememberSaveable { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+    // Track video path for title dialog
+    var pendingVideoPath by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Count of active uploads for badge
     val activeUploadCount = uploadUiState.uploads.count {
@@ -114,12 +117,34 @@ private fun MainAppContent(
         .firstOrNull { it.status == UploadStatus.UPLOADING }
         ?.progress?.progressPercent
 
+    // Show title dialog when a video is recorded
+    pendingVideoPath?.let { videoPath ->
+        VideoTitleDialog(
+            onConfirm = { title ->
+                // Schedule the video for upload with the provided title
+                val finalTitle = title.ifBlank { null }
+                uploadViewModel.scheduleUpload(videoPath, finalTitle)
+                pendingVideoPath = null
+            },
+            onSkip = {
+                // Schedule the video for upload without a title (auto-generate)
+                uploadViewModel.scheduleUpload(videoPath, null)
+                pendingVideoPath = null
+            },
+            onDismiss = {
+                // User dismissed the dialog - still upload with auto-generated title
+                uploadViewModel.scheduleUpload(videoPath, null)
+                pendingVideoPath = null
+            }
+        )
+    }
+
     if (showCamera) {
         CameraScreen(
             onClose = { showCamera = false },
             onVideoRecorded = { videoPath ->
-                // Schedule the video for upload
-                uploadViewModel.scheduleUpload(videoPath, null)
+                // Store the video path and show title dialog
+                pendingVideoPath = videoPath
                 showCamera = false
             }
         )
