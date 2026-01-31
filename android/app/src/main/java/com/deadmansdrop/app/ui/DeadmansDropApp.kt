@@ -43,6 +43,7 @@ import com.deadmansdrop.app.ui.screens.upload.UploadProgressList
 import com.deadmansdrop.app.ui.screens.upload.UploadStatus
 import com.deadmansdrop.app.ui.screens.upload.UploadViewModel
 import com.deadmansdrop.app.ui.screens.camera.TitleGeneratorViewModel
+import com.deadmansdrop.app.ui.screens.videos.VideoListScreen
 import kotlinx.coroutines.launch
 
 /**
@@ -165,13 +166,16 @@ private fun MainAppContent(
         Scaffold(
             modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
+                    .padding(innerPadding)
             ) {
+                // Header with welcome message and action buttons
                 Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -179,16 +183,13 @@ private fun MainAppContent(
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.headlineSmall
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "(Main content coming soon)",
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Action buttons row
                     Button(onClick = { showCamera = true }) {
                         Text(stringResource(R.string.main_record_video))
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Upload progress button with badge
                     if (uploadUiState.uploads.isNotEmpty()) {
@@ -220,13 +221,18 @@ private fun MainAppContent(
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    Button(onClick = onLogout) {
+                    TextButton(onClick = onLogout) {
                         Text("Logout")
                     }
                 }
+
+                // Video list takes remaining space
+                VideoListScreen(
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 

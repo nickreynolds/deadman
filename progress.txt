@@ -2143,3 +2143,64 @@ Task 140: Create WorkManager upload service (Android)
   - Storage space freed: YES (File.delete() called)
   - Pending uploads not affected: YES (only delete on success, not on retry/failure)
 - No changes required - task was already complete from previous WorkManager upload implementation
+
+### Task 148: Create video list UI for Android (2026-01-31)
+- **Category:** UI
+- **Description:** Build video list screen using Jetpack Compose LazyColumn
+- **Implementation:**
+  1. Added GET /api/videos endpoint to VideoApiService:
+     - Added `@GET("api/videos")` endpoint with status, limit, and offset query parameters
+     - Uses existing VideoListResponse model
+  
+  2. Created VideoRepository (android/app/src/main/java/com/deadmansdrop/app/data/repository/VideoRepository.kt):
+     - Singleton repository injected via Hilt
+     - Fetches videos from server using ApiClient.safeApiCall()
+     - Caches VideoApiService and recreates on server URL change
+     - Supports status filter and pagination parameters
+  
+  3. Created VideoListViewModel (android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoListViewModel.kt):
+     - Hilt-injected ViewModel with StateFlow for UI state
+     - VideoListUiState with videos list, loading, refreshing, and error states
+     - loadVideos() for initial load with loading indicator
+     - refreshVideos() for pull-to-refresh with refresh indicator
+     - Automatically loads videos on init
+  
+  4. Created VideoListScreen (android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoListScreen.kt):
+     - Uses PullToRefreshBox for pull-to-refresh functionality
+     - LazyColumn with VideoCard items for efficient scrolling
+     - Handles empty state with icon and helpful message
+     - Handles loading state with CircularProgressIndicator
+     - Handles error state with error message and retry hint
+     - VideoCard displays:
+       - Video title with overflow handling
+       - Status chip with appropriate icon and color (Pending/Active/Sent/Expired)
+       - Distribution time (relative time or date)
+       - Created time (relative time)
+       - File size
+     - formatRelativeTime() for human-readable timestamps
+     - formatFileSize() for human-readable file sizes
+  
+  5. Integrated VideoListScreen into DeadmansDropApp:
+     - Replaced placeholder text "(Main content coming soon)" with VideoListScreen
+     - Restructured MainAppContent layout to use Column with:
+       - Header section with welcome message and buttons
+       - VideoListScreen with weight(1f) to fill remaining space
+     - Added VideoListScreen import
+  
+- **Files Created:**
+  - android/app/src/main/java/com/deadmansdrop/app/data/repository/VideoRepository.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoListViewModel.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoListScreen.kt
+  
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/VideoApiService.kt (added getVideos endpoint)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (integrated VideoListScreen)
+
+- **Verification:**
+  - List displays videos in scrollable view: YES (LazyColumn with VideoCard items)
+  - Empty state shown when no videos: YES (icon + helpful message)
+  - List styling matches app design: YES (Material3 Card components, consistent colors)
+  - Pull-to-refresh supported: YES (PullToRefreshBox)
+  - Error handling: YES (error state with retry hint)
+  - Status indicators: YES (color-coded chips for each video status)
+  - Relative time formatting: YES (e.g., "2 days ago", "in 3 hours")
