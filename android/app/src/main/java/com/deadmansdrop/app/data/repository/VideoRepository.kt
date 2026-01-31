@@ -3,6 +3,8 @@ package com.deadmansdrop.app.data.repository
 import com.deadmansdrop.app.data.api.ApiClient
 import com.deadmansdrop.app.data.api.ApiResult
 import com.deadmansdrop.app.data.api.VideoApiService
+import com.deadmansdrop.app.data.api.models.CheckInRequest
+import com.deadmansdrop.app.data.api.models.VideoCheckInResponse
 import com.deadmansdrop.app.data.api.models.VideoDeleteResponse
 import com.deadmansdrop.app.data.api.models.VideoDetailResponse
 import com.deadmansdrop.app.data.api.models.VideoListResponse
@@ -76,6 +78,24 @@ class VideoRepository @Inject constructor(
 
         return ApiClient.safeApiCall {
             service.deleteVideo(videoId)
+        }
+    }
+
+    /**
+     * Perform a check-in action on a video.
+     *
+     * @param videoId The ID of the video to check in
+     * @param action The check-in action (PREVENT_DISTRIBUTION or ALLOW_DISTRIBUTION)
+     * @return ApiResult containing the updated video and check-in record, or error
+     */
+    suspend fun checkInVideo(videoId: String, action: String): ApiResult<VideoCheckInResponse> {
+        val serverUrl = credentialManager.getServerUrl()
+            ?: return ApiResult.Error("Not connected to server")
+
+        val service = getOrCreateVideoApiService(serverUrl)
+
+        return ApiClient.safeApiCall {
+            service.checkInVideo(videoId, CheckInRequest(action))
         }
     }
 

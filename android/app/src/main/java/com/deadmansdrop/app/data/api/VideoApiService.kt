@@ -1,5 +1,7 @@
 package com.deadmansdrop.app.data.api
 
+import com.deadmansdrop.app.data.api.models.CheckInRequest
+import com.deadmansdrop.app.data.api.models.VideoCheckInResponse
 import com.deadmansdrop.app.data.api.models.VideoDeleteResponse
 import com.deadmansdrop.app.data.api.models.VideoDetailResponse
 import com.deadmansdrop.app.data.api.models.VideoListResponse
@@ -7,6 +9,7 @@ import com.deadmansdrop.app.data.api.models.VideoUploadResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
@@ -72,4 +75,17 @@ interface VideoApiService {
     suspend fun deleteVideo(
         @Path("id") id: String
     ): Response<VideoDeleteResponse>
+
+    /**
+     * Perform check-in action on a video.
+     * POST /api/videos/:id/checkin
+     *
+     * @param id Video ID to check in
+     * @param request Check-in request with action type
+     */
+    @POST("api/videos/{id}/checkin")
+    suspend fun checkInVideo(
+        @Path("id") id: String,
+        @Body request: CheckInRequest
+    ): Response<VideoCheckInResponse>
 }

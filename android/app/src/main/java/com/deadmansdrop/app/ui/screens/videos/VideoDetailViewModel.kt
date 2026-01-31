@@ -25,7 +25,11 @@ data class VideoDetailUiState(
     val showDeleteConfirmation: Boolean = false,
     val isDeleting: Boolean = false,
     val deleteError: String? = null,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    // Check-in state
+    val isCheckingIn: Boolean = false,
+    val checkInError: String? = null,
+    val checkInSuccess: Boolean = false
 )
 
 /**
@@ -140,5 +144,52 @@ class VideoDetailViewModel @AssistedInject constructor(
      */
     fun clearDeleteError() {
         _uiState.update { it.copy(deleteError = null) }
+    }
+
+    /**
+     * Perform a check-in to prevent distribution.
+     * This extends the distribution timer.
+     */
+    fun checkIn() {
+        if (_uiState.value.isCheckingIn) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCheckingIn = true, checkInError = null, checkInSuccess = false) }
+
+            when (val result = videoRepository.checkInVideo(videoId, "PREVENT_DISTRIBUTION")) {
+                is ApiResult.Success -> {
+                    _uiState.update { state ->
+                        state.copy(
+                            video = result.data.video,
+                            isCheckingIn = false,
+                            checkInError = null,
+                            checkInSuccess = true
+                        )
+                    }
+                }
+                is ApiResult.Error -> {
+                    _uiState.update { state ->
+                        state.copy(
+                            isCheckingIn = false,
+                            checkInError = result.message
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Clear check-in error message.
+     */
+    fun clearCheckInError() {
+        _uiState.update { it.copy(checkInError = null) }
+    }
+
+    /**
+     * Clear check-in success message.
+     */
+    fun clearCheckInSuccess() {
+        _uiState.update { it.copy(checkInSuccess = false) }
     }
 }

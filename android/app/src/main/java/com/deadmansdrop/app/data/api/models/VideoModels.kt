@@ -60,3 +60,37 @@ enum class VideoStatus {
     DISTRIBUTED,
     EXPIRED
 }
+
+/**
+ * Check-in action types.
+ * Based on PRD Section 4.4 CheckIn data model.
+ */
+enum class CheckInAction {
+    PREVENT_DISTRIBUTION,
+    ALLOW_DISTRIBUTION
+}
+
+/**
+ * Request body for POST /api/videos/:id/checkin
+ */
+data class CheckInRequest(
+    @SerializedName("action") val action: String
+)
+
+/**
+ * Check-in record returned from the server.
+ */
+data class CheckInResponse(
+    @SerializedName("id") val id: String,
+    @SerializedName("video_id") val videoId: String,
+    @SerializedName("action") val action: String,
+    @SerializedName("created_at") val createdAt: String
+)
+
+/**
+ * Response from POST /api/videos/:id/checkin
+ */
+data class VideoCheckInResponse(
+    @SerializedName("video") val video: VideoResponse,
+    @SerializedName("checkin") val checkin: CheckInResponse
+)

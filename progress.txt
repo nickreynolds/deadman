@@ -2357,3 +2357,65 @@ Task 140: Create WorkManager upload service (Android)
   - Delete functionality: YES (confirmation dialog, loading state, returns to list after deletion)
   - Status badges: YES (color-coded status with appropriate icons)
   - Error handling: YES (error state with retry option)
+
+### Task 154: Add check-in button (2026-01-31)
+- **Category:** UI
+- **Description:** Add check-in button to video detail view
+
+- **Status:** FINISHED
+
+- **Implementation Details:**
+
+  1. **VideoModels.kt** - Added check-in related models:
+     - `CheckInAction` enum (PREVENT_DISTRIBUTION, ALLOW_DISTRIBUTION)
+     - `CheckInRequest` data class for API request body
+     - `CheckInResponse` data class for check-in record from server
+     - `VideoCheckInResponse` data class wrapping updated video and check-in record
+     
+  2. **VideoApiService.kt** - Added check-in endpoint:
+     - `checkInVideo()` endpoint with `@POST("api/videos/{id}/checkin")`
+     - Takes video ID as path parameter and CheckInRequest as body
+     - Returns `Response<VideoCheckInResponse>`
+     
+  3. **VideoRepository.kt** - Added repository method:
+     - `checkInVideo(videoId: String, action: String)` method
+     - Uses `ApiClient.safeApiCall` wrapper for error handling
+     - Creates `CheckInRequest` with the action and calls API service
+     - Returns `ApiResult<VideoCheckInResponse>`
+     
+  4. **VideoDetailViewModel.kt** - Added check-in state and methods:
+     - Added to `VideoDetailUiState`:
+       - `isCheckingIn: Boolean` - loading state during check-in
+       - `checkInError: String?` - error message from check-in
+       - `checkInSuccess: Boolean` - success flag for snackbar
+     - Added `checkIn()` method:
+       - Calls `videoRepository.checkInVideo()` with "PREVENT_DISTRIBUTION"
+       - Updates video in state on success
+       - Sets error or success flags
+     - Added `clearCheckInError()` and `clearCheckInSuccess()` methods
+     
+  5. **VideoDetailScreen.kt** - Added check-in button UI:
+     - Added `SnackbarHostState` and `SnackbarHost` for feedback
+     - Added `LaunchedEffect` blocks for success/error snackbar messages
+     - Updated `VideoDetailContent` to accept `isCheckingIn` and `onCheckIn`
+     - Added check-in button in Actions section:
+       - Uses primary colors, positioned above delete button
+       - Enabled only for ACTIVE videos (`isActive` check)
+       - Shows loading spinner during check-in
+       - Shows "Check In (Reset Timer)" label
+     - Added helper text for non-active videos explaining why disabled
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/models/VideoModels.kt
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/VideoApiService.kt
+  - android/app/src/main/java/com/deadmansdrop/app/data/repository/VideoRepository.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailViewModel.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailScreen.kt
+
+- **Verification:**
+  - Button prominently displayed: YES (primary color button in Actions section)
+  - Button disabled for non-active videos: YES (checks `video.status.uppercase() == "ACTIVE"`)
+  - Tap initiates check-in flow: YES (calls `viewModel.checkIn()` which makes API call)
+  - Loading state: YES (shows CircularProgressIndicator)
+  - Success/error feedback: YES (uses Snackbar to show messages)
+  - Updates video data: YES (video state updated with response from server)

@@ -1959,7 +1959,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Button prominently displayed
   - Button disabled for non-active videos
   - Tap initiates check-in flow
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 155: Implement check-in API call**
 - **Category:** Networking

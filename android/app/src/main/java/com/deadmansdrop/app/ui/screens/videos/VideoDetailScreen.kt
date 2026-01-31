@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
@@ -38,6 +39,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -45,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -77,6 +81,7 @@ fun VideoDetailScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Navigate back after successful deletion
     LaunchedEffect(uiState.isDeleted) {
@@ -85,7 +90,24 @@ fun VideoDetailScreen(
         }
     }
 
+    // Show check-in success message
+    LaunchedEffect(uiState.checkInSuccess) {
+        if (uiState.checkInSuccess) {
+            snackbarHostState.showSnackbar("Check-in successful! Timer has been reset.")
+            viewModel.clearCheckInSuccess()
+        }
+    }
+
+    // Show check-in error message
+    LaunchedEffect(uiState.checkInError) {
+        uiState.checkInError?.let { error ->
+            snackbarHostState.showSnackbar("Check-in failed: $error")
+            viewModel.clearCheckInError()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Video Details") },
@@ -149,6 +171,8 @@ fun VideoDetailScreen(
                     // Video details
                     VideoDetailContent(
                         video = uiState.video!!,
+                        isCheckingIn = uiState.isCheckingIn,
+                        onCheckIn = { viewModel.checkIn() },
                         onDelete = { viewModel.requestDelete() }
                     )
                 }
@@ -213,9 +237,12 @@ fun VideoDetailScreen(
 @Composable
 private fun VideoDetailContent(
     video: VideoResponse,
+    isCheckingIn: Boolean,
+    onCheckIn: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isActive = video.status.uppercase() == "ACTIVE"
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -375,6 +402,50 @@ private fun VideoDetailContent(
 
         // Actions Section
         HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Check-In Button (only enabled for ACTIVE videos)
+        Button(
+            onClick = onCheckIn,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = isActive && !isCheckingIn,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
+            if (isCheckingIn) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(if (isCheckingIn) "Checking In..." else "Check In (Reset Timer)")
+        }
+
+        // Helper text for check-in
+        if (!isActive) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = when (video.status.uppercase()) {
+                    "PENDING" -> "Video is pending upload"
+                    "DISTRIBUTED" -> "Video has already been distributed"
+                    "EXPIRED" -> "Video has expired"
+                    else -> "Check-in is only available for active videos"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // Delete Button
