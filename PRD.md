@@ -1892,7 +1892,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Temp file deleted after upload confirms
   - Storage space freed
   - Pending uploads not affected
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.3.5 Android Video List & Management
 

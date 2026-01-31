@@ -2128,3 +2128,18 @@ Task 140: Create WorkManager upload service (Android)
   - Title format matches server-side implementation
   - Location is optional and gracefully handles missing permissions or errors
   - Default title includes date/time in human-readable format
+
+### Task 147: Clean up temp files for Android (2026-01-31)
+- **Category:** Storage
+- **Description:** Delete temporary video files after successful upload
+- **Already Implemented** - Verified that temp file cleanup is fully functional:
+  - `VideoUploadWorker.kt` line 79: calls `deleteLocalVideoFile(videoFile)` after successful upload
+  - `deleteLocalVideoFile()` method at lines 254-262 safely deletes the file with error handling
+  - Only deletes on `ApiResult.Success` - pending/failed uploads retain their files
+  - Failed recording cleanup is also handled in `CameraViewModel.kt` lines 292-295
+- Files storing temp videos: `context.filesDir/videos/` directory (e.g., `/data/data/com.deadmansdrop.app/files/videos/`)
+- Verification results:
+  - Temp file deleted after upload confirms: YES (line 79 in VideoUploadWorker)
+  - Storage space freed: YES (File.delete() called)
+  - Pending uploads not affected: YES (only delete on success, not on retry/failure)
+- No changes required - task was already complete from previous WorkManager upload implementation
