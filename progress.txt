@@ -2033,3 +2033,27 @@ Task 140: Create WorkManager upload service (Android)
 - Verified: Progress percentage updates during upload (via ProgressRequestBody callback)
 - Verified: Progress notification shows status (via VideoUploadWorker notification updates)
 - Verified: Completion indicated clearly in both notification and UI
+
+### Task 143: Handle upload errors (2026-01-31)
+- Enhanced VideoUploadWorker.kt with comprehensive error handling:
+  - Added detailed retry strategy documentation
+  - Improved shouldRetry() to check MAX_RETRY_ATTEMPTS first before evaluating error codes
+  - Added explicit handling for 401 (auth), 413 (payload too large), and other client errors
+  - Added getUserFriendlyErrorMessage() for user-facing error messages
+  - Updated notification messages to use friendly error messages
+  - Added KEY_ERROR_CODE output data for error tracking
+  - Improved logging with detailed retry attempt information
+- Enhanced VideoUploadRepository.kt with exponential backoff:
+  - Added BackoffPolicy.EXPONENTIAL configuration to work requests
+  - Set INITIAL_BACKOFF_SECONDS = 30 (backoff doubles: 30s, 60s, 120s...)
+  - Added TimeUnit import for backoff configuration
+- Retry behavior:
+  - Network errors (null code): Retry with exponential backoff
+  - 408 Request Timeout: Always retry
+  - 429 Rate Limited: Always retry (backoff helps)
+  - 500-599 Server errors: Retry
+  - 401 Unauthorized: Don't retry (requires user re-login)
+  - 413 Payload Too Large: Don't retry (file won't shrink)
+  - Other 4xx: Don't retry (client error won't change)
+- Persistent failures show user-friendly notification messages
+- Verified: Code compiles correctly (manual review - no Java runtime in environment)

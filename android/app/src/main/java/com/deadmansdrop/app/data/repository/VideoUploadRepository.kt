@@ -1,6 +1,7 @@
 package com.deadmansdrop.app.data.repository
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
@@ -8,6 +9,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 import com.deadmansdrop.app.data.api.ApiClient
 import com.deadmansdrop.app.data.api.ApiResult
 import com.deadmansdrop.app.data.api.VideoApiService
@@ -80,6 +82,11 @@ class VideoUploadRepository @Inject constructor(
         val uploadRequest = OneTimeWorkRequestBuilder<VideoUploadWorker>()
             .setInputData(inputData)
             .setConstraints(constraints)
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                INITIAL_BACKOFF_SECONDS,
+                TimeUnit.SECONDS
+            )
             .addTag(TAG_VIDEO_UPLOAD)
             .addTag("upload_$videoFilePath")
             .build()
@@ -229,5 +236,10 @@ class VideoUploadRepository @Inject constructor(
 
     companion object {
         const val TAG_VIDEO_UPLOAD = "video_upload"
+
+        // Backoff configuration for retries
+        // Initial backoff of 30 seconds, then exponential (30s, 60s, 120s, etc.)
+        // WorkManager caps maximum backoff at 5 hours
+        const val INITIAL_BACKOFF_SECONDS = 30L
     }
 }

@@ -81,28 +81,35 @@ class VideoUploadWorker @AssistedInject constructor(
                     Result.success(createSuccessData(result.data.video.id))
                 }
                 is ApiResult.Error -> {
-                    Log.e(TAG, "Upload failed: ${result.message}")
+                    Log.e(TAG, "Upload failed: ${result.message} (code: ${result.code})")
+                    val userFriendlyMessage = getUserFriendlyErrorMessage(result.code, result.message)
 
                     // Check if we should retry
                     if (shouldRetry(result.code)) {
-                        Log.i(TAG, "Retrying upload for ${videoFile.name}, attempt ${runAttemptCount}")
-                        updateNotificationRetry(videoFile.name)
+                        val nextAttempt = runAttemptCount + 1
+                        Log.i(TAG, "Scheduling retry for ${videoFile.name}, attempt $nextAttempt/$MAX_RETRY_ATTEMPTS")
+                        updateNotificationRetry(videoFile.name, nextAttempt)
                         Result.retry()
                     } else {
-                        updateNotificationFailure(videoFile.name, result.message)
-                        Result.failure(createErrorData(result.message))
+                        Log.e(TAG, "Upload permanently failed for ${videoFile.name}: $userFriendlyMessage")
+                        updateNotificationFailure(videoFile.name, userFriendlyMessage)
+                        Result.failure(createErrorData(userFriendlyMessage, result.code))
                     }
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Upload exception: ${e.message}", e)
+            val userFriendlyMessage = getUserFriendlyErrorMessage(null, e.message ?: "Unknown error")
 
             if (runAttemptCount < MAX_RETRY_ATTEMPTS) {
-                updateNotificationRetry(videoFile.name)
+                val nextAttempt = runAttemptCount + 1
+                Log.i(TAG, "Scheduling retry after exception for ${videoFile.name}, attempt $nextAttempt/$MAX_RETRY_ATTEMPTS")
+                updateNotificationRetry(videoFile.name, nextAttempt)
                 Result.retry()
             } else {
-                updateNotificationFailure(videoFile.name, e.message ?: "Unknown error")
-                Result.failure(createErrorData(e.message ?: "Unknown error"))
+                Log.e(TAG, "Upload permanently failed after $MAX_RETRY_ATTEMPTS attempts for ${videoFile.name}")
+                updateNotificationFailure(videoFile.name, userFriendlyMessage)
+                Result.failure(createErrorData(userFriendlyMessage, null))
             }
         }
     }
@@ -186,13 +193,61 @@ class VideoUploadWorker @AssistedInject constructor(
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
+    /**
+     * Determines if the upload should be retried based on error code and attempt count.
+     *
+     * Retry strategy:
+     * - Network errors (null code): Retry with exponential backoff
+     * - 408 Request Timeout: Always retry (transient)
+     * - 429 Too Many Requests: Always retry (rate limited, backoff will help)
+     * - 500-599 Server errors: Retry (server may recover)
+     * - 401 Unauthorized: Don't retry (auth issue needs user action)
+     * - 413 Payload Too Large: Don't retry (file won't shrink)
+     * - Other 4xx: Don't retry (client error, won't change)
+     *
+     * WorkManager handles backoff automatically with exponential policy configured
+     * in VideoUploadRepository (30s initial, doubling each retry).
+     */
     private fun shouldRetry(errorCode: Int?): Boolean {
-        // Retry on server errors and timeouts, but not on client errors (4xx except 408, 429)
+        // Always check attempt count first
+        if (runAttemptCount >= MAX_RETRY_ATTEMPTS) {
+            Log.w(TAG, "Max retry attempts ($MAX_RETRY_ATTEMPTS) reached, not retrying")
+            return false
+        }
+
         return when (errorCode) {
-            null -> runAttemptCount < MAX_RETRY_ATTEMPTS // Network errors
-            408, 429 -> true // Request timeout, rate limited
-            in 500..599 -> true // Server errors
-            else -> false // Client errors (4xx) are not retryable
+            null -> true // Network errors - retry with backoff
+            408 -> true // Request timeout - transient, retry
+            429 -> true // Rate limited - backoff will help
+            in 500..599 -> true // Server errors - may recover
+            401 -> {
+                Log.w(TAG, "Authentication error (401) - user action required")
+                false
+            }
+            413 -> {
+                Log.w(TAG, "Payload too large (413) - file exceeds server limit")
+                false
+            }
+            else -> {
+                Log.w(TAG, "Client error ($errorCode) - not retryable")
+                false
+            }
+        }
+    }
+
+    /**
+     * Get a user-friendly error message based on the error code.
+     */
+    private fun getUserFriendlyErrorMessage(errorCode: Int?, originalMessage: String): String {
+        return when (errorCode) {
+            null -> "Network connection failed. Please check your internet connection."
+            401 -> "Authentication failed. Please log in again."
+            403 -> "Permission denied. You don't have access to upload videos."
+            408 -> "Request timed out. Please try again."
+            413 -> "Video file is too large. Please record a shorter video."
+            429 -> "Too many requests. Please wait and try again."
+            in 500..599 -> "Server error. Please try again later."
+            else -> originalMessage
         }
     }
 
@@ -248,10 +303,10 @@ class VideoUploadWorker @AssistedInject constructor(
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
-    private fun updateNotificationRetry(fileName: String) {
+    private fun updateNotificationRetry(fileName: String, attemptNumber: Int) {
         val notification = NotificationCompat.Builder(applicationContext, DeadmansDropApplication.CHANNEL_UPLOAD_PROGRESS)
             .setContentTitle("Retrying Upload")
-            .setContentText("$fileName - Attempt ${runAttemptCount + 1}/$MAX_RETRY_ATTEMPTS")
+            .setContentText("$fileName - Attempt $attemptNumber/$MAX_RETRY_ATTEMPTS")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setOngoing(true)
             .setProgress(100, 0, true)
@@ -267,10 +322,13 @@ class VideoUploadWorker @AssistedInject constructor(
             .build()
     }
 
-    private fun createErrorData(errorMessage: String): Data {
+    private fun createErrorData(errorMessage: String, errorCode: Int? = null): Data {
         return Data.Builder()
             .putString(KEY_ERROR_MESSAGE, errorMessage)
             .putBoolean(KEY_UPLOAD_SUCCESS, false)
+            .apply {
+                errorCode?.let { putInt(KEY_ERROR_CODE, it) }
+            }
             .build()
     }
 
@@ -286,6 +344,7 @@ class VideoUploadWorker @AssistedInject constructor(
         const val KEY_VIDEO_ID = "video_id"
         const val KEY_UPLOAD_SUCCESS = "upload_success"
         const val KEY_ERROR_MESSAGE = "error_message"
+        const val KEY_ERROR_CODE = "error_code"
 
         // Progress data keys
         const val KEY_PROGRESS_PERCENT = "progress_percent"
