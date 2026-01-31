@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +63,7 @@ import java.time.temporal.ChronoUnit
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoListScreen(
+    onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: VideoListViewModel = hiltViewModel()
 ) {
@@ -150,6 +152,7 @@ fun VideoListScreen(
                     ) { video ->
                         SwipeToDeleteVideoCard(
                             video = video,
+                            onClick = { onVideoClick(video.id) },
                             onDelete = { viewModel.requestDeleteVideo(video) }
                         )
                     }
@@ -177,6 +180,7 @@ fun VideoListScreen(
 @Composable
 fun SwipeToDeleteVideoCard(
     video: VideoResponse,
+    onClick: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -227,7 +231,7 @@ fun SwipeToDeleteVideoCard(
             }
         },
         content = {
-            VideoCard(video = video, modifier = modifier)
+            VideoCard(video = video, onClick = onClick, modifier = modifier)
         },
         enableDismissFromStartToEnd = false,
         enableDismissFromEndToStart = true
@@ -299,6 +303,7 @@ fun DeleteVideoConfirmationDialog(
 @Composable
 fun VideoCard(
     video: VideoResponse,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val statusInfo = getStatusInfo(video.status)
@@ -306,7 +311,8 @@ fun VideoCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .animateContentSize(),
+            .animateContentSize()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = statusInfo.containerColor.copy(alpha = 0.1f)
         ),

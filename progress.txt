@@ -2286,3 +2286,74 @@ Task 140: Create WorkManager upload service (Android)
   - Displays any error messages
 - Verified: All code is syntactically correct
 - Marked as FINISHED
+
+### Task 153: Create video detail view (2026-01-31)
+- **Category:** UI
+- **Description:** Build detail view showing full video metadata
+
+- **Status:** FINISHED
+
+- **Implementation Details:**
+
+  1. **VideoApiService** (VideoApiService.kt:60-63):
+     - Added `getVideoDetail()` endpoint with `@GET("api/videos/{id}")`
+     - Takes video ID as path parameter
+     - Returns `Response<VideoDetailResponse>`
+     
+  2. **VideoRepository** (VideoRepository.kt:48-63):
+     - Added `getVideoDetail(videoId: String)` method
+     - Uses `ApiClient.safeApiCall` wrapper for error handling
+     - Returns `ApiResult<VideoDetailResponse>`
+     
+  3. **VideoDetailViewModel** (VideoDetailViewModel.kt):
+     - New ViewModel using Hilt assisted injection pattern
+     - Accepts `videoId` at runtime via `@Assisted` annotation
+     - Factory interface for ViewModel creation
+     - UI state includes: video, isLoading, error, delete confirmation states
+     - Methods: loadVideoDetail(), requestDelete(), confirmDelete(), cancelDelete()
+     - Auto-loads video detail on init
+     - Handles deletion with navigation back on success
+     
+  4. **VideoDetailScreen** (VideoDetailScreen.kt):
+     - Scaffold with TopAppBar and back navigation button
+     - Loading state with CircularProgressIndicator
+     - Error state with retry button
+     - Video detail content organized in Cards:
+       - Title card with video title and status badge
+       - Distribution section (scheduled time, distributed time, expires time)
+       - File details section (size, format/MIME type)
+       - Timestamps section (created, updated)
+       - Public link section (for distributed videos only)
+       - Delete button at bottom
+     - Delete confirmation AlertDialog with loading state
+     - Navigates back after successful deletion
+     
+  5. **VideoListScreen Updates** (VideoListScreen.kt):
+     - Added `onVideoClick: (String) -> Unit` callback parameter
+     - VideoCard now accepts and handles onClick
+     - SwipeToDeleteVideoCard passes onClick to VideoCard
+     - Card is now clickable using `.clickable(onClick = onClick)` modifier
+     
+  6. **Navigation Integration** (DeadmansDropApp.kt):
+     - Added `selectedVideoId` state to track selected video
+     - VideoDetailScreen shown when selectedVideoId is not null
+     - VideoListScreen passes onVideoClick callback to set selectedVideoId
+     - Back navigation clears selectedVideoId
+
+- **Files Created:**
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailScreen.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailViewModel.kt
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/VideoApiService.kt (added getVideoDetail)
+  - android/app/src/main/java/com/deadmansdrop/app/data/repository/VideoRepository.kt (added getVideoDetail)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoListScreen.kt (added onVideoClick, made VideoCard clickable)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (integrated detail screen navigation)
+
+- **Verification:**
+  - All video properties displayed: YES (title, status, distribution times, file size, MIME type, timestamps)
+  - Navigation from list to detail works: YES (tap on VideoCard sets selectedVideoId, shows VideoDetailScreen)
+  - Back navigation returns to list: YES (TopAppBar back button clears selectedVideoId)
+  - Delete functionality: YES (confirmation dialog, loading state, returns to list after deletion)
+  - Status badges: YES (color-coded status with appropriate icons)
+  - Error handling: YES (error state with retry option)

@@ -4,6 +4,7 @@ import com.deadmansdrop.app.data.api.ApiClient
 import com.deadmansdrop.app.data.api.ApiResult
 import com.deadmansdrop.app.data.api.VideoApiService
 import com.deadmansdrop.app.data.api.models.VideoDeleteResponse
+import com.deadmansdrop.app.data.api.models.VideoDetailResponse
 import com.deadmansdrop.app.data.api.models.VideoListResponse
 import com.deadmansdrop.app.data.security.CredentialManager
 import retrofit2.Retrofit
@@ -41,6 +42,23 @@ class VideoRepository @Inject constructor(
 
         return ApiClient.safeApiCall {
             service.getVideos(status, limit, offset)
+        }
+    }
+
+    /**
+     * Fetch a single video's details by ID.
+     *
+     * @param videoId The ID of the video to retrieve
+     * @return ApiResult containing the video details or error
+     */
+    suspend fun getVideoDetail(videoId: String): ApiResult<VideoDetailResponse> {
+        val serverUrl = credentialManager.getServerUrl()
+            ?: return ApiResult.Error("Not connected to server")
+
+        val service = getOrCreateVideoApiService(serverUrl)
+
+        return ApiClient.safeApiCall {
+            service.getVideoDetail(videoId)
         }
     }
 

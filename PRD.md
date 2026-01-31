@@ -1948,7 +1948,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - All video properties displayed
   - Navigation from list to detail works
   - Back navigation returns to list
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.3.6 Android Check-In Functionality
 

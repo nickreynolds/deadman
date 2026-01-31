@@ -1,6 +1,7 @@
 package com.deadmansdrop.app.data.api
 
 import com.deadmansdrop.app.data.api.models.VideoDeleteResponse
+import com.deadmansdrop.app.data.api.models.VideoDetailResponse
 import com.deadmansdrop.app.data.api.models.VideoListResponse
 import com.deadmansdrop.app.data.api.models.VideoUploadResponse
 import okhttp3.MultipartBody
@@ -49,6 +50,17 @@ interface VideoApiService {
         @Query("limit") limit: Int = 50,
         @Query("offset") offset: Int = 0
     ): Response<VideoListResponse>
+
+    /**
+     * Get video metadata.
+     * GET /api/videos/:id
+     *
+     * @param id Video ID to retrieve
+     */
+    @GET("api/videos/{id}")
+    suspend fun getVideoDetail(
+        @Path("id") id: String
+    ): Response<VideoDetailResponse>
 
     /**
      * Delete a video.

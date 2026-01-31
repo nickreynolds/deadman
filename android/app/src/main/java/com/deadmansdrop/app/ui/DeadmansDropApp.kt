@@ -43,6 +43,7 @@ import com.deadmansdrop.app.ui.screens.upload.UploadProgressList
 import com.deadmansdrop.app.ui.screens.upload.UploadStatus
 import com.deadmansdrop.app.ui.screens.upload.UploadViewModel
 import com.deadmansdrop.app.ui.screens.camera.TitleGeneratorViewModel
+import com.deadmansdrop.app.ui.screens.videos.VideoDetailScreen
 import com.deadmansdrop.app.ui.screens.videos.VideoListScreen
 import kotlinx.coroutines.launch
 
@@ -115,6 +116,8 @@ private fun MainAppContent(
     val sheetState = rememberModalBottomSheetState()
     // Track video path for title dialog
     var pendingVideoPath by rememberSaveable { mutableStateOf<String?>(null) }
+    // Track selected video for detail screen
+    var selectedVideoId by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Count of active uploads for badge
     val activeUploadCount = uploadUiState.uploads.count {
@@ -161,6 +164,11 @@ private fun MainAppContent(
                 pendingVideoPath = videoPath
                 showCamera = false
             }
+        )
+    } else if (selectedVideoId != null) {
+        VideoDetailScreen(
+            videoId = selectedVideoId!!,
+            onBack = { selectedVideoId = null }
         )
     } else {
         Scaffold(
@@ -231,6 +239,7 @@ private fun MainAppContent(
 
                 // Video list takes remaining space
                 VideoListScreen(
+                    onVideoClick = { videoId -> selectedVideoId = videoId },
                     modifier = Modifier.weight(1f)
                 )
             }
