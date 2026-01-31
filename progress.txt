@@ -2237,3 +2237,52 @@ Task 140: Create WorkManager upload service (Android)
   - Videos fetched on screen load: YES (ViewModel.init calls loadVideos())
   - Loading state shown during fetch: YES (CircularProgressIndicator when isLoading && videos.isEmpty())
   - Errors handled gracefully: YES (Error message with "Pull down to retry" hint)
+
+### Tasks 150, 151, 152: Android Video List UI Improvements (2026-01-31)
+
+#### Task 150: Display video info (Already Implemented)
+- Verified VideoCard composable in VideoListScreen.kt already displays:
+  - Video title with titleMedium style (1 line max, ellipsis overflow)
+  - Status chip with color-coded icons (PENDING, ACTIVE, DISTRIBUTED, EXPIRED)
+  - Distribution time with relative formatting (e.g., "Distributes in 2 days")
+  - Creation time with relative formatting
+  - File size in human-readable format
+- Task was already complete from previous Task 148/149 work
+- Marked as FINISHED
+
+#### Task 151: Implement pull-to-refresh (Already Implemented)
+- Verified PullToRefreshBox already implemented in VideoListScreen
+- Uses Material3's experimental PullToRefreshBox API
+- Connected to ViewModel's refreshVideos() function
+- Marked as FINISHED
+
+#### Task 152: Add swipe-to-delete
+- Added DELETE endpoint to VideoApiService:
+  - DELETE /api/videos/{id} using Retrofit @DELETE annotation
+  - Returns VideoDeleteResponse (success: Boolean)
+- Added deleteVideo() method to VideoRepository:
+  - Takes videoId parameter
+  - Uses safeApiCall for error handling
+- Updated VideoListUiState with delete-related state:
+  - videoToDelete: VideoResponse? for confirmation dialog
+  - isDeleting: Boolean for loading state
+  - deleteError: String? for error display
+- Added ViewModel methods:
+  - requestDeleteVideo(video) - shows confirmation dialog
+  - cancelDelete() - dismisses dialog
+  - confirmDelete() - executes deletion and updates list
+  - clearDeleteError() - clears error state
+- Created SwipeToDeleteVideoCard composable:
+  - Wraps VideoCard with SwipeToDismissBox
+  - Shows red delete background with trash icon on swipe
+  - Only allows end-to-start swipe (right to left)
+  - Triggers confirmation dialog on swipe completion
+  - Resets swipe state after deletion
+- Created DeleteVideoConfirmationDialog composable:
+  - Shows video title in confirmation message
+  - Warning about irreversible action
+  - Delete button with loading spinner during deletion
+  - Cancel button to dismiss
+  - Displays any error messages
+- Verified: All code is syntactically correct
+- Marked as FINISHED

@@ -3,6 +3,7 @@ package com.deadmansdrop.app.data.repository
 import com.deadmansdrop.app.data.api.ApiClient
 import com.deadmansdrop.app.data.api.ApiResult
 import com.deadmansdrop.app.data.api.VideoApiService
+import com.deadmansdrop.app.data.api.models.VideoDeleteResponse
 import com.deadmansdrop.app.data.api.models.VideoListResponse
 import com.deadmansdrop.app.data.security.CredentialManager
 import retrofit2.Retrofit
@@ -40,6 +41,23 @@ class VideoRepository @Inject constructor(
 
         return ApiClient.safeApiCall {
             service.getVideos(status, limit, offset)
+        }
+    }
+
+    /**
+     * Delete a video by ID.
+     *
+     * @param videoId The ID of the video to delete
+     * @return ApiResult containing success status or error
+     */
+    suspend fun deleteVideo(videoId: String): ApiResult<VideoDeleteResponse> {
+        val serverUrl = credentialManager.getServerUrl()
+            ?: return ApiResult.Error("Not connected to server")
+
+        val service = getOrCreateVideoApiService(serverUrl)
+
+        return ApiClient.safeApiCall {
+            service.deleteVideo(videoId)
         }
     }
 

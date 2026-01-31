@@ -1921,7 +1921,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Title displays clearly
   - Status visually distinct (colors/icons)
   - distribute_at shows relative or absolute time
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 151: Implement pull-to-refresh**
 - **Category:** UI
@@ -1930,7 +1930,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Pull gesture triggers refresh
   - Loading indicator appears
   - List updates with fresh data
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 152: Add swipe-to-delete**
 - **Category:** UI
@@ -1939,7 +1939,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Swipe reveals delete action
   - Confirmation dialog prevents accidents
   - Video removed from list after delete
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 153: Create video detail view**
 - **Category:** UI

@@ -21,7 +21,10 @@ data class VideoListUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val totalCount: Int = 0
+    val totalCount: Int = 0,
+    val videoToDelete: VideoResponse? = null,
+    val isDeleting: Boolean = false,
+    val deleteError: String? = null
 )
 
 /**
@@ -111,5 +114,61 @@ class VideoListViewModel @Inject constructor(
      */
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    /**
+     * Request to delete a video (shows confirmation dialog).
+     */
+    fun requestDeleteVideo(video: VideoResponse) {
+        _uiState.update { it.copy(videoToDelete = video) }
+    }
+
+    /**
+     * Cancel the delete operation.
+     */
+    fun cancelDelete() {
+        _uiState.update { it.copy(videoToDelete = null, deleteError = null) }
+    }
+
+    /**
+     * Confirm and execute the video deletion.
+     */
+    fun confirmDelete() {
+        val video = _uiState.value.videoToDelete ?: return
+        if (_uiState.value.isDeleting) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeleting = true, deleteError = null) }
+
+            when (val result = videoRepository.deleteVideo(video.id)) {
+                is ApiResult.Success -> {
+                    // Remove the video from the list
+                    _uiState.update { state ->
+                        state.copy(
+                            videos = state.videos.filter { it.id != video.id },
+                            totalCount = state.totalCount - 1,
+                            isDeleting = false,
+                            videoToDelete = null,
+                            deleteError = null
+                        )
+                    }
+                }
+                is ApiResult.Error -> {
+                    _uiState.update { state ->
+                        state.copy(
+                            isDeleting = false,
+                            deleteError = result.message
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Clear delete error message.
+     */
+    fun clearDeleteError() {
+        _uiState.update { it.copy(deleteError = null) }
     }
 }

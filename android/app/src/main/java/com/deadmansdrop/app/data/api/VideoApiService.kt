@@ -1,14 +1,17 @@
 package com.deadmansdrop.app.data.api
 
+import com.deadmansdrop.app.data.api.models.VideoDeleteResponse
 import com.deadmansdrop.app.data.api.models.VideoListResponse
 import com.deadmansdrop.app.data.api.models.VideoUploadResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 /**
@@ -46,4 +49,15 @@ interface VideoApiService {
         @Query("limit") limit: Int = 50,
         @Query("offset") offset: Int = 0
     ): Response<VideoListResponse>
+
+    /**
+     * Delete a video.
+     * DELETE /api/videos/:id
+     *
+     * @param id Video ID to delete
+     */
+    @DELETE("api/videos/{id}")
+    suspend fun deleteVideo(
+        @Path("id") id: String
+    ): Response<VideoDeleteResponse>
 }
