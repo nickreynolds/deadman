@@ -34,4 +34,10 @@
 
     <!-- Main Screen -->
     <string name="main_record_video">Record Video</string>
+
+    <!-- Notification Permission -->
+    <string name="notification_permission_title">Enable Notifications</string>
+    <string name="notification_permission_rationale">Deadman\'s Drop sends daily check-in reminders to prevent your videos from being distributed. Without notifications, you may miss important reminders.</string>
+    <string name="notification_permission_grant">Enable</string>
+    <string name="notification_permission_dismiss">Not Now</string>
 </resources>

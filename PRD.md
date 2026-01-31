@@ -1997,7 +1997,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Permission requested on Android 13+
   - Lower versions work without permission
   - Denied permission handled gracefully
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 159: Register for FCM**
 - **Category:** Push Notifications

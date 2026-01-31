@@ -2482,3 +2482,37 @@ Task 140: Create WorkManager upload service (Android)
   - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added videoListNeedsRefresh state, wired callbacks)
 
 - **Build Note:** Java/JDK not available in build environment. Changes follow existing Compose patterns (LaunchedEffect, StateFlow, callback parameters) used throughout the codebase.
+### Task 158: Request notification permissions for Android 13+ (2026-01-31)
+- Implemented POST_NOTIFICATIONS runtime permission request for Android 13+ (API 33+) in the main app screen
+- Uses Accompanist Permissions library (already in dependencies) following the same pattern as CameraScreen.kt
+- **Implementation in DeadmansDropApp.kt (MainAppContent composable):**
+  - Added `Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU` check so permission is only requested on Android 13+
+  - Uses `rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)` from Accompanist
+  - On first composition of MainAppContent (after login), automatically requests permission via `LaunchedEffect(Unit)`
+  - If rationale should be shown (user previously denied), displays an AlertDialog explaining why notifications are needed
+  - Tracks `hasRequestedNotificationPermission` via `rememberSaveable` to avoid re-requesting on recomposition
+  - Second `LaunchedEffect(notificationPermissionState.status)` monitors permission status changes to show rationale dialog after denial
+  - Denied permission handled gracefully - app continues to function, user just won't receive push notification reminders
+  - Lower Android versions (< API 33) skip the permission block entirely - notifications work without runtime permission
+
+- **String resources added to strings.xml:**
+  - `notification_permission_title`: "Enable Notifications"
+  - `notification_permission_rationale`: Explains check-in reminders and consequences of not enabling
+  - `notification_permission_grant`: "Enable" button text
+  - `notification_permission_dismiss`: "Not Now" button text
+
+- **Task 158 Verification:**
+  - Permission requested on Android 13+: YES (Build.VERSION_CODES.TIRAMISU gate)
+  - Lower versions work without permission: YES (entire permission block wrapped in SDK version check)
+  - Denied permission handled gracefully: YES (dialog dismissible, app continues normally, no crash or blocking UI)
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added notification permission request with rationale dialog)
+  - android/app/src/main/res/values/strings.xml (added notification permission strings)
+
+- **Files Already Configured (no changes needed):**
+  - AndroidManifest.xml: POST_NOTIFICATIONS permission already declared
+  - DeadmansDropApplication.kt: Notification channels already created (checkin_reminders, upload_progress)
+  - DeadmansDropFirebaseMessagingService.kt: FCM service already registered
+
+- **Build Note:** Java/JDK not available in build environment. Changes follow existing Accompanist permissions patterns (rememberPermissionState, LaunchedEffect, shouldShowRationale) used in CameraScreen.kt.

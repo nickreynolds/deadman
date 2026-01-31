@@ -1,5 +1,7 @@
 package com.deadmansdrop.app.ui
 
+import android.Manifest
+import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -7,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -22,6 +25,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +38,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.deadmansdrop.app.R
 import com.deadmansdrop.app.ui.auth.AuthViewModel
 import com.deadmansdrop.app.ui.screens.camera.CameraScreen
@@ -99,7 +107,7 @@ fun DeadmansDropApp(
  * Main app content after login.
  * Handles navigation to camera screen and other features.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 private fun MainAppContent(
     username: String?,
@@ -120,6 +128,63 @@ private fun MainAppContent(
     var selectedVideoId by rememberSaveable { mutableStateOf<String?>(null) }
     // Track whether the video list needs to refresh (e.g., after check-in)
     var videoListNeedsRefresh by rememberSaveable { mutableStateOf(false) }
+
+    // Request notification permission on Android 13+ (API 33+)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val notificationPermissionState = rememberPermissionState(
+            Manifest.permission.POST_NOTIFICATIONS
+        )
+        var showNotificationRationale by rememberSaveable { mutableStateOf(false) }
+        var hasRequestedNotificationPermission by rememberSaveable { mutableStateOf(false) }
+
+        // Request permission once when the main screen first appears
+        LaunchedEffect(Unit) {
+            if (!notificationPermissionState.status.isGranted && !hasRequestedNotificationPermission) {
+                if (notificationPermissionState.status.shouldShowRationale) {
+                    showNotificationRationale = true
+                } else {
+                    notificationPermissionState.launchPermissionRequest()
+                    hasRequestedNotificationPermission = true
+                }
+            }
+        }
+
+        // Show rationale after the initial request is denied and rationale should be shown
+        LaunchedEffect(notificationPermissionState.status) {
+            if (hasRequestedNotificationPermission &&
+                !notificationPermissionState.status.isGranted &&
+                notificationPermissionState.status.shouldShowRationale &&
+                !showNotificationRationale
+            ) {
+                showNotificationRationale = true
+            }
+        }
+
+        // Notification permission rationale dialog
+        if (showNotificationRationale) {
+            AlertDialog(
+                onDismissRequest = { showNotificationRationale = false },
+                title = { Text(stringResource(R.string.notification_permission_title)) },
+                text = { Text(stringResource(R.string.notification_permission_rationale)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showNotificationRationale = false
+                            notificationPermissionState.launchPermissionRequest()
+                            hasRequestedNotificationPermission = true
+                        }
+                    ) {
+                        Text(stringResource(R.string.notification_permission_grant))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNotificationRationale = false }) {
+                        Text(stringResource(R.string.notification_permission_dismiss))
+                    }
+                }
+            )
+        }
+    }
 
     // Count of active uploads for badge
     val activeUploadCount = uploadUiState.uploads.count {
