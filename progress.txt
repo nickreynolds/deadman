@@ -2419,3 +2419,42 @@ Task 140: Create WorkManager upload service (Android)
   - Loading state: YES (shows CircularProgressIndicator)
   - Success/error feedback: YES (uses Snackbar to show messages)
   - Updates video data: YES (video state updated with response from server)
+### Task 155: Implement check-in API call (2026-01-31)
+- **Note:** This task was already fully implemented as part of Task 154. The check-in API call was built end-to-end:
+  - Retrofit endpoint: `checkInVideo()` in `VideoApiService.kt`
+  - Repository method: `checkInVideo()` in `VideoRepository.kt`
+  - ViewModel method: `checkIn()` in `VideoDetailViewModel.kt`
+  - Sends `PREVENT_DISTRIBUTION` action, parses `VideoCheckInResponse`, handles errors
+- **Status:** Marked as FINISHED (already complete)
+
+### Task 156: Show confirmation dialog (2026-01-31)
+- Added confirmation dialog before PREVENT_DISTRIBUTION check-in action
+- Follows the same pattern as the existing delete confirmation dialog
+
+- **Changes:**
+
+  1. **VideoDetailViewModel.kt** - Added confirmation flow:
+     - Added `showCheckInConfirmation: Boolean` to `VideoDetailUiState`
+     - Added `requestCheckIn()` method to show confirmation dialog
+     - Added `cancelCheckIn()` method to dismiss dialog
+     - Modified `checkIn()` to dismiss dialog before making API call
+
+  2. **VideoDetailScreen.kt** - Added confirmation dialog UI:
+     - Changed button callback from `viewModel.checkIn()` to `viewModel.requestCheckIn()`
+     - Added `AlertDialog` for check-in confirmation with:
+       - Title: "Prevent Distribution?"
+       - Body text explaining the action and timer reset
+       - "Confirm" button that calls `viewModel.checkIn()`
+       - "Cancel" button that calls `viewModel.cancelCheckIn()`
+       - Dismiss on outside tap calls `viewModel.cancelCheckIn()`
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailViewModel.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailScreen.kt
+
+- **Verification:**
+  - Dialog explains the action: YES (title "Prevent Distribution?" with explanation text)
+  - User can confirm or cancel: YES (Confirm and Cancel buttons)
+  - Cancel returns unchanged: YES (cancelCheckIn() just hides dialog, no state changes)
+
+- **Build Note:** Java/JDK not available in build environment. Changes follow identical patterns to existing delete confirmation dialog which compiles successfully.

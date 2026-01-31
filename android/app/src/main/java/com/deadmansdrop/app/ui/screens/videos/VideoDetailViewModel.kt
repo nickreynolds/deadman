@@ -25,6 +25,7 @@ data class VideoDetailUiState(
     val deleteError: String? = null,
     val isDeleted: Boolean = false,
     // Check-in state
+    val showCheckInConfirmation: Boolean = false,
     val isCheckingIn: Boolean = false,
     val checkInError: String? = null,
     val checkInSuccess: Boolean = false
@@ -140,14 +141,28 @@ class VideoDetailViewModel @Inject constructor(
     }
 
     /**
-     * Perform a check-in to prevent distribution.
+     * Request to check in (shows confirmation dialog).
+     */
+    fun requestCheckIn() {
+        _uiState.update { it.copy(showCheckInConfirmation = true) }
+    }
+
+    /**
+     * Cancel the check-in operation.
+     */
+    fun cancelCheckIn() {
+        _uiState.update { it.copy(showCheckInConfirmation = false) }
+    }
+
+    /**
+     * Confirm and perform a check-in to prevent distribution.
      * This extends the distribution timer.
      */
     fun checkIn() {
         if (_uiState.value.isCheckingIn) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isCheckingIn = true, checkInError = null, checkInSuccess = false) }
+            _uiState.update { it.copy(showCheckInConfirmation = false, isCheckingIn = true, checkInError = null, checkInSuccess = false) }
 
             val id = currentVideoId ?: return@launch
             when (val result = videoRepository.checkInVideo(id, "PREVENT_DISTRIBUTION")) {

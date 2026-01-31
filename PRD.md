@@ -1968,7 +1968,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - API call sends correct action type
   - Success response parsed correctly
   - Errors handled and displayed
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 156: Show confirmation dialog**
 - **Category:** UI
@@ -1977,7 +1977,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Dialog explains the action
   - User can confirm or cancel
   - Cancel returns unchanged
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 157: Update UI after check-in**
 - **Category:** UI
