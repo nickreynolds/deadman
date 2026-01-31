@@ -64,8 +64,8 @@ android {
 }
 
 dependencies {
-    // Compose BOM for consistent versions
-    val composeBom = platform("androidx.compose:compose-bom:2024.01.00")
+    // Compose BOM for consistent versions (2024.04+ aligns Material3 CircularProgressIndicator with animation KeyframesSpec API)
+    val composeBom = platform("androidx.compose:compose-bom:2024.04.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
