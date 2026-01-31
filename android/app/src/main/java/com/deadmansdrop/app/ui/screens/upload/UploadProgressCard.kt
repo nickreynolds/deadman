@@ -118,7 +118,7 @@ fun UploadProgressCard(
             if (uploadState.status == UploadStatus.UPLOADING) {
                 Spacer(modifier = Modifier.height(12.dp))
                 LinearProgressIndicator(
-                    progress = { uploadState.progress.progressPercent / 100f },
+                    progress = uploadState.progress.progressPercent / 100f,
                     modifier = Modifier.fillMaxWidth(),
                     strokeCap = StrokeCap.Round
                 )

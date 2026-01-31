@@ -214,11 +214,11 @@ private fun CameraPreviewContent(
                 cameraProviderFuture.addListener({
                     val cameraProvider = cameraProviderFuture.get()
 
-                    // Build the preview use case
+                    // Build the preview use case (getSurfaceProvider() returns ListenableFuture<Preview.SurfaceProvider>)
                     val preview = Preview.Builder()
                         .build()
                         .also {
-                            it.surfaceProvider = previewView.surfaceProvider
+                            it.setSurfaceProvider(previewView.getSurfaceProvider())
                         }
 
                     // Build the video capture use case
