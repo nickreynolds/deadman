@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,6 +42,8 @@ import com.deadmansdrop.app.ui.screens.login.LoginScreen
 import com.deadmansdrop.app.ui.screens.upload.UploadProgressList
 import com.deadmansdrop.app.ui.screens.upload.UploadStatus
 import com.deadmansdrop.app.ui.screens.upload.UploadViewModel
+import com.deadmansdrop.app.ui.screens.camera.TitleGeneratorViewModel
+import kotlinx.coroutines.launch
 
 /**
  * Main composable for Deadman's Drop app.
@@ -53,7 +56,8 @@ import com.deadmansdrop.app.ui.screens.upload.UploadViewModel
 @Composable
 fun DeadmansDropApp(
     authViewModel: AuthViewModel = hiltViewModel(),
-    uploadViewModel: UploadViewModel = hiltViewModel()
+    uploadViewModel: UploadViewModel = hiltViewModel(),
+    titleGeneratorViewModel: TitleGeneratorViewModel = hiltViewModel()
 ) {
     val authState by authViewModel.authState.collectAsState()
     val uploadUiState by uploadViewModel.uiState.collectAsState()
@@ -74,7 +78,8 @@ fun DeadmansDropApp(
                 username = authState.username,
                 onLogout = { authViewModel.logout() },
                 uploadViewModel = uploadViewModel,
-                uploadUiState = uploadUiState
+                uploadUiState = uploadUiState,
+                titleGeneratorViewModel = titleGeneratorViewModel
             )
         }
         else -> {
@@ -98,8 +103,10 @@ private fun MainAppContent(
     username: String?,
     onLogout: () -> Unit,
     uploadViewModel: UploadViewModel,
-    uploadUiState: com.deadmansdrop.app.ui.screens.upload.UploadUiState
+    uploadUiState: com.deadmansdrop.app.ui.screens.upload.UploadUiState,
+    titleGeneratorViewModel: TitleGeneratorViewModel
 ) {
+    val coroutineScope = rememberCoroutineScope()
     // Track whether camera screen is shown
     var showCamera by rememberSaveable { mutableStateOf(false) }
     // Track whether upload progress sheet is shown
@@ -127,13 +134,19 @@ private fun MainAppContent(
                 pendingVideoPath = null
             },
             onSkip = {
-                // Schedule the video for upload without a title (auto-generate)
-                uploadViewModel.scheduleUpload(videoPath, null)
+                // Schedule the video for upload with auto-generated title
+                coroutineScope.launch {
+                    val autoTitle = titleGeneratorViewModel.generateAutoTitle()
+                    uploadViewModel.scheduleUpload(videoPath, autoTitle)
+                }
                 pendingVideoPath = null
             },
             onDismiss = {
                 // User dismissed the dialog - still upload with auto-generated title
-                uploadViewModel.scheduleUpload(videoPath, null)
+                coroutineScope.launch {
+                    val autoTitle = titleGeneratorViewModel.generateAutoTitle()
+                    uploadViewModel.scheduleUpload(videoPath, autoTitle)
+                }
                 pendingVideoPath = null
             }
         )

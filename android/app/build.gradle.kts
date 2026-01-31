@@ -118,6 +118,9 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
 
+    // Google Play Services Location for auto-generated video titles
+    implementation("com.google.android.gms:play-services-location:21.1.0")
+
     // Hilt for dependency injection
     implementation("com.google.dagger:hilt-android:2.50")
     kapt("com.google.dagger:hilt-android-compiler:2.50")

@@ -2089,3 +2089,42 @@ Task 140: Create WorkManager upload service (Android)
   - android/app/src/main/java/com/deadmansdrop/app/ui/screens/camera/VideoTitleDialog.kt (new)
   - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt
   - android/app/src/main/res/values/strings.xml
+
+### Task 146: Auto-generate titles for Android (2026-01-31)
+- **Category:** Business Logic
+- **Description:** Generate title from date/location when user skips title entry
+- **Implementation:**
+  - Added location permissions to AndroidManifest.xml:
+    - ACCESS_COARSE_LOCATION
+    - ACCESS_FINE_LOCATION
+  - Created TitleGenerator utility class (android/app/src/main/java/com/deadmansdrop/app/utils/TitleGenerator.kt):
+    - Generates titles in format "Video YYYY-MM-DD HH:MM" or "Video YYYY-MM-DD HH:MM - Location"
+    - Matches server-side title format for consistency
+    - Truncates location to 50 characters max
+  - Created LocationProvider class (android/app/src/main/java/com/deadmansdrop/app/utils/LocationProvider.kt):
+    - Uses FusedLocationProviderClient for efficient location retrieval
+    - Handles permission checking
+    - Uses Geocoder to convert coordinates to human-readable location names
+    - Prefers city name, falls back to neighborhood/street/state
+    - Gracefully handles errors (location is optional)
+  - Created TitleGeneratorViewModel (android/app/src/main/java/com/deadmansdrop/app/ui/screens/camera/TitleGeneratorViewModel.kt):
+    - Hilt-injected ViewModel for clean dependency injection
+    - Exposes generateAutoTitle() suspend function
+    - Handles location errors gracefully
+  - Updated DeadmansDropApp.kt to use TitleGeneratorViewModel:
+    - On "Skip" or dismiss, auto-generates title with date/time and optional location
+    - Uses coroutineScope for async location fetch
+  - Added play-services-location dependency to build.gradle.kts
+- **Files Modified:**
+  - android/app/src/main/AndroidManifest.xml (added location permissions)
+  - android/app/build.gradle.kts (added play-services-location dependency)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (integrated title generation)
+- **Files Created:**
+  - android/app/src/main/java/com/deadmansdrop/app/utils/TitleGenerator.kt
+  - android/app/src/main/java/com/deadmansdrop/app/utils/LocationProvider.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/camera/TitleGeneratorViewModel.kt
+- **Verification:**
+  - Code follows Android best practices with Hilt dependency injection
+  - Title format matches server-side implementation
+  - Location is optional and gracefully handles missing permissions or errors
+  - Default title includes date/time in human-readable format
