@@ -30,3 +30,5 @@ coverage/
 prisma/*.db
 prisma/*.db-journal
 prisma/generated/*
+
+uploads/

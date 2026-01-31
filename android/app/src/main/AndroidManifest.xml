@@ -54,6 +54,12 @@
             </intent-filter>
         </activity>
 
+        <!-- WorkManager foreground service: must declare type so it matches ForegroundInfo (dataSync) -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
         <!-- Firebase Messaging Service -->
         <service
             android:name=".services.DeadmansDropFirebaseMessagingService"
