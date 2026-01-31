@@ -67,10 +67,20 @@ import java.time.temporal.ChronoUnit
 fun VideoListScreen(
     onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    refreshTrigger: Boolean = false,
+    onRefreshConsumed: () -> Unit = {},
     viewModel: VideoListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = uiState.isRefreshing)
+
+    // Refresh the list when triggered externally (e.g., after a check-in)
+    LaunchedEffect(refreshTrigger) {
+        if (refreshTrigger) {
+            viewModel.refreshVideos()
+            onRefreshConsumed()
+        }
+    }
 
     SwipeRefresh(
         state = swipeRefreshState,

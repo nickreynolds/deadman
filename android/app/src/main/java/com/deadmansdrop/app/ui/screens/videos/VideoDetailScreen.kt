@@ -73,6 +73,7 @@ import java.time.format.DateTimeFormatter
 fun VideoDetailScreen(
     videoId: String,
     onBack: () -> Unit,
+    onVideoUpdated: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: VideoDetailViewModel = hiltViewModel()
 ) {
@@ -91,10 +92,17 @@ fun VideoDetailScreen(
         }
     }
 
-    // Show check-in success message
+    // Show check-in success message with new distribution date
     LaunchedEffect(uiState.checkInSuccess) {
         if (uiState.checkInSuccess) {
-            snackbarHostState.showSnackbar("Check-in successful! Timer has been reset.")
+            val newDate = uiState.video?.distributeAt?.let { formatDateTime(it) }
+            val message = if (newDate != null) {
+                "Check-in successful! New distribution: $newDate"
+            } else {
+                "Check-in successful! Timer has been reset."
+            }
+            snackbarHostState.showSnackbar(message)
+            onVideoUpdated()
             viewModel.clearCheckInSuccess()
         }
     }

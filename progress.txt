@@ -2458,3 +2458,27 @@ Task 140: Create WorkManager upload service (Android)
   - Cancel returns unchanged: YES (cancelCheckIn() just hides dialog, no state changes)
 
 - **Build Note:** Java/JDK not available in build environment. Changes follow identical patterns to existing delete confirmation dialog which compiles successfully.
+
+### Task 157: Update UI after check-in (Android) (2026-01-31)
+- Enhanced the check-in success feedback to show the new distribution date in the Snackbar message
+  - Changed from generic "Check-in successful! Timer has been reset." to "Check-in successful! New distribution: Jan 31, 2026 at 3:00 PM" (with actual date from server response)
+  - Falls back to generic message if distributeAt is unavailable
+- Added `onVideoUpdated` callback to `VideoDetailScreen` to notify parent when video data changes after check-in
+- Added `refreshTrigger` and `onRefreshConsumed` parameters to `VideoListScreen` for external refresh signals
+- Connected the flow in `DeadmansDropApp.kt`:
+  - `VideoDetailScreen.onVideoUpdated` sets `videoListNeedsRefresh = true`
+  - `VideoListScreen` detects `refreshTrigger = true` via `LaunchedEffect` and calls `refreshVideos()`
+  - After refresh, `onRefreshConsumed` resets the flag
+- This ensures the video list shows updated `distribute_at` times when navigating back from the detail screen after a check-in
+
+- **Task 157 Verification:**
+  - Status updates immediately: YES (VideoDetailViewModel.checkIn() replaces video with server response containing updated status)
+  - distribute_at reflects extension: YES (server response contains new distribute_at, displayed in Distribution section; video list also refreshes)
+  - Success feedback shown: YES (Snackbar shows new distribution date after successful check-in)
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailScreen.kt (added onVideoUpdated callback, enhanced snackbar message)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoListScreen.kt (added refreshTrigger/onRefreshConsumed params with LaunchedEffect)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added videoListNeedsRefresh state, wired callbacks)
+
+- **Build Note:** Java/JDK not available in build environment. Changes follow existing Compose patterns (LaunchedEffect, StateFlow, callback parameters) used throughout the codebase.

@@ -1986,7 +1986,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Status updates immediately
   - distribute_at reflects extension
   - Success feedback shown
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.3.7 Android Push Notifications
 

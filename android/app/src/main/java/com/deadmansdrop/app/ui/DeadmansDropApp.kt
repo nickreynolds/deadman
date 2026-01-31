@@ -118,6 +118,8 @@ private fun MainAppContent(
     var pendingVideoPath by rememberSaveable { mutableStateOf<String?>(null) }
     // Track selected video for detail screen
     var selectedVideoId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Track whether the video list needs to refresh (e.g., after check-in)
+    var videoListNeedsRefresh by rememberSaveable { mutableStateOf(false) }
 
     // Count of active uploads for badge
     val activeUploadCount = uploadUiState.uploads.count {
@@ -168,7 +170,8 @@ private fun MainAppContent(
     } else if (selectedVideoId != null) {
         VideoDetailScreen(
             videoId = selectedVideoId!!,
-            onBack = { selectedVideoId = null }
+            onBack = { selectedVideoId = null },
+            onVideoUpdated = { videoListNeedsRefresh = true }
         )
     } else {
         Scaffold(
@@ -240,6 +243,8 @@ private fun MainAppContent(
                 // Video list takes remaining space
                 VideoListScreen(
                     onVideoClick = { videoId -> selectedVideoId = videoId },
+                    refreshTrigger = videoListNeedsRefresh,
+                    onRefreshConsumed = { videoListNeedsRefresh = false },
                     modifier = Modifier.weight(1f)
                 )
             }
