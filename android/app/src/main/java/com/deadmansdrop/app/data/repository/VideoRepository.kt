@@ -10,14 +10,12 @@ import com.deadmansdrop.app.data.api.models.VideoDetailResponse
 import com.deadmansdrop.app.data.api.models.VideoListResponse
 import com.deadmansdrop.app.data.security.CredentialManager
 import retrofit2.Retrofit
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Repository for fetching and managing videos from the server.
+ * Provided by [com.deadmansdrop.app.di.RepositoryModule].
  */
-@Singleton
-class VideoRepository @Inject constructor(
+class VideoRepository(
     private val credentialManager: CredentialManager,
     private val retrofitBuilder: Retrofit.Builder
 ) {

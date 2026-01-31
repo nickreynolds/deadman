@@ -74,14 +74,15 @@ fun VideoDetailScreen(
     videoId: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: VideoDetailViewModel = hiltViewModel(
-        creationCallback = { factory: VideoDetailViewModel.Factory ->
-            factory.create(videoId)
-        }
-    )
+    viewModel: VideoDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Load video when screen is shown
+    LaunchedEffect(videoId) {
+        viewModel.loadVideoDetail(videoId)
+    }
 
     // Navigate back after successful deletion
     LaunchedEffect(uiState.isDeleted) {
@@ -161,7 +162,7 @@ fun VideoDetailScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(onClick = { viewModel.loadVideoDetail() }) {
+                            OutlinedButton(onClick = { viewModel.loadVideoDetail(videoId) }) {
                                 Text("Retry")
                             }
                         }

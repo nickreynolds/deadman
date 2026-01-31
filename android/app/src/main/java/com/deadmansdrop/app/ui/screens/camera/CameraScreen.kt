@@ -195,6 +195,10 @@ private fun CameraPreviewContent(
     var videoCapture by remember { mutableStateOf<VideoCapture<Recorder>?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // Track last bound lens to avoid rebinding on every recomposition.
+        // Rebinding during recording start tears down surfaces/encoder and causes failures.
+        var lastBoundLens by remember { mutableStateOf<CameraLens?>(null) }
+
         // Camera preview using AndroidView to embed PreviewView
         AndroidView(
             factory = { ctx ->
@@ -208,7 +212,11 @@ private fun CameraPreviewContent(
                 }
             },
             modifier = Modifier.fillMaxSize(),
-            update = { previewView ->
+            update = update@ { previewView ->
+                // Only rebind when camera lens changes - avoid unbindAll during recording
+                if (lastBoundLens == selectedLens) return@update
+                lastBoundLens = selectedLens
+
                 val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
                 cameraProviderFuture.addListener({
@@ -230,7 +238,7 @@ private fun CameraPreviewContent(
                     videoCapture = newVideoCapture
 
                     try {
-                        // Unbind all use cases before rebinding
+                        // Unbind all use cases before rebinding (only when switching lenses)
                         cameraProvider.unbindAll()
 
                         // Bind the camera to the lifecycle with both preview and video capture

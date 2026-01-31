@@ -37,13 +37,14 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
@@ -61,6 +62,7 @@ import java.time.temporal.ChronoUnit
  * Screen displaying the list of user's videos.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("DEPRECATION") // SwipeRefresh is deprecated but PullToRefreshBox requires newer Compose BOM
 @Composable
 fun VideoListScreen(
     onVideoClick: (String) -> Unit,
@@ -68,9 +70,10 @@ fun VideoListScreen(
     viewModel: VideoListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = uiState.isRefreshing)
 
-    PullToRefreshBox(
-        isRefreshing = uiState.isRefreshing,
+    SwipeRefresh(
+        state = swipeRefreshState,
         onRefresh = { viewModel.refreshVideos() },
         modifier = modifier.fillMaxSize()
     ) {

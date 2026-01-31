@@ -5,15 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.deadmansdrop.app.data.api.ApiResult
 import com.deadmansdrop.app.data.api.models.VideoResponse
 import com.deadmansdrop.app.data.repository.VideoRepository
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedFactory
-import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
  * UI state for the video detail screen.
@@ -36,31 +34,25 @@ data class VideoDetailUiState(
  * ViewModel for the video detail screen.
  * Manages fetching and displaying a single video's details.
  *
- * Uses assisted injection to receive the videoId at runtime.
+ * Call [loadVideoDetail] with the video ID when the screen is shown.
  */
-@HiltViewModel(assistedFactory = VideoDetailViewModel.Factory::class)
-class VideoDetailViewModel @AssistedInject constructor(
-    private val videoRepository: VideoRepository,
-    @Assisted private val videoId: String
+@HiltViewModel
+class VideoDetailViewModel @Inject constructor(
+    private val videoRepository: VideoRepository
 ) : ViewModel() {
 
-    @AssistedFactory
-    interface Factory {
-        fun create(videoId: String): VideoDetailViewModel
-    }
+    private var currentVideoId: String? = null
 
     private val _uiState = MutableStateFlow(VideoDetailUiState())
     val uiState: StateFlow<VideoDetailUiState> = _uiState.asStateFlow()
 
-    init {
-        loadVideoDetail()
-    }
-
     /**
      * Load video details from the server.
+     * Call this when the screen is shown with a video ID.
      */
-    fun loadVideoDetail() {
+    fun loadVideoDetail(videoId: String) {
         if (_uiState.value.isLoading) return
+        currentVideoId = videoId
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -117,7 +109,8 @@ class VideoDetailViewModel @AssistedInject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isDeleting = true, deleteError = null) }
 
-            when (val result = videoRepository.deleteVideo(videoId)) {
+            val id = currentVideoId ?: return@launch
+            when (val result = videoRepository.deleteVideo(id)) {
                 is ApiResult.Success -> {
                     _uiState.update { state ->
                         state.copy(
@@ -156,7 +149,8 @@ class VideoDetailViewModel @AssistedInject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isCheckingIn = true, checkInError = null, checkInSuccess = false) }
 
-            when (val result = videoRepository.checkInVideo(videoId, "PREVENT_DISTRIBUTION")) {
+            val id = currentVideoId ?: return@launch
+            when (val result = videoRepository.checkInVideo(id, "PREVENT_DISTRIBUTION")) {
                 is ApiResult.Success -> {
                     _uiState.update { state ->
                         state.copy(
