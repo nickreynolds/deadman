@@ -4,13 +4,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +37,9 @@ import com.deadmansdrop.app.R
 import com.deadmansdrop.app.ui.auth.AuthViewModel
 import com.deadmansdrop.app.ui.screens.camera.CameraScreen
 import com.deadmansdrop.app.ui.screens.login.LoginScreen
+import com.deadmansdrop.app.ui.screens.upload.UploadProgressList
+import com.deadmansdrop.app.ui.screens.upload.UploadStatus
+import com.deadmansdrop.app.ui.screens.upload.UploadViewModel
 
 /**
  * Main composable for Deadman's Drop app.
@@ -38,9 +51,11 @@ import com.deadmansdrop.app.ui.screens.login.LoginScreen
  */
 @Composable
 fun DeadmansDropApp(
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: AuthViewModel = hiltViewModel(),
+    uploadViewModel: UploadViewModel = hiltViewModel()
 ) {
     val authState by authViewModel.authState.collectAsState()
+    val uploadUiState by uploadViewModel.uiState.collectAsState()
 
     when {
         authState.isLoading -> {
@@ -56,7 +71,9 @@ fun DeadmansDropApp(
             // Main app content (to be implemented in later tasks)
             MainAppContent(
                 username = authState.username,
-                onLogout = { authViewModel.logout() }
+                onLogout = { authViewModel.logout() },
+                uploadViewModel = uploadViewModel,
+                uploadUiState = uploadUiState
             )
         }
         else -> {
@@ -74,17 +91,37 @@ fun DeadmansDropApp(
  * Main app content after login.
  * Handles navigation to camera screen and other features.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainAppContent(
     username: String?,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    uploadViewModel: UploadViewModel,
+    uploadUiState: com.deadmansdrop.app.ui.screens.upload.UploadUiState
 ) {
     // Track whether camera screen is shown
     var showCamera by rememberSaveable { mutableStateOf(false) }
+    // Track whether upload progress sheet is shown
+    var showUploadSheet by rememberSaveable { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+
+    // Count of active uploads for badge
+    val activeUploadCount = uploadUiState.uploads.count {
+        it.status == UploadStatus.UPLOADING || it.status == UploadStatus.PENDING
+    }
+    // Get current progress for single active upload
+    val currentUploadProgress = uploadUiState.uploads
+        .firstOrNull { it.status == UploadStatus.UPLOADING }
+        ?.progress?.progressPercent
 
     if (showCamera) {
         CameraScreen(
-            onClose = { showCamera = false }
+            onClose = { showCamera = false },
+            onVideoRecorded = { videoPath ->
+                // Schedule the video for upload
+                uploadViewModel.scheduleUpload(videoPath, null)
+                showCamera = false
+            }
         )
     } else {
         Scaffold(
@@ -114,10 +151,61 @@ private fun MainAppContent(
                         Text(stringResource(R.string.main_record_video))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    // Upload progress button with badge
+                    if (uploadUiState.uploads.isNotEmpty()) {
+                        BadgedBox(
+                            badge = {
+                                if (activeUploadCount > 0) {
+                                    Badge {
+                                        Text(activeUploadCount.toString())
+                                    }
+                                }
+                            }
+                        ) {
+                            TextButton(
+                                onClick = { showUploadSheet = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.CloudUpload,
+                                    contentDescription = null,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = when {
+                                        activeUploadCount > 0 && currentUploadProgress != null ->
+                                            "Uploading... $currentUploadProgress%"
+                                        activeUploadCount > 0 ->
+                                            "Uploading..."
+                                        else -> "View uploads"
+                                    }
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
                     Button(onClick = onLogout) {
                         Text("Logout")
                     }
                 }
+            }
+        }
+
+        // Upload progress bottom sheet
+        if (showUploadSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showUploadSheet = false },
+                sheetState = sheetState
+            ) {
+                UploadProgressList(
+                    uploads = uploadUiState.uploads,
+                    onCancel = { workId -> uploadViewModel.cancelUpload(workId) },
+                    onDismiss = { workId -> uploadViewModel.dismissUpload(workId) },
+                    onClearCompleted = { uploadViewModel.clearCompletedUploads() },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }

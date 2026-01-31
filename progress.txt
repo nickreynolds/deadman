@@ -2009,3 +2009,27 @@ Task 140: Create WorkManager upload service (Android)
   - Proper Hilt injection setup for Workers
   - Network constraints ensure upload only when connected
   - Upload survives app restart via WorkManager persistence
+
+### Task 142: Add progress tracking for Android video uploads (2026-01-31)
+- Created UploadViewModel to manage and track video upload progress:
+  - Observes WorkManager work info for all scheduled uploads
+  - Tracks upload status (PENDING, UPLOADING, SUCCESS, FAILED, CANCELLED)
+  - Extracts progress data (percent, bytes uploaded, total bytes)
+  - Provides methods to cancel uploads and dismiss completed ones
+- Created UploadProgressCard composable for displaying individual upload status:
+  - Shows file name, status icon, and progress information
+  - Displays linear progress bar during active uploads
+  - Shows error messages for failed uploads
+  - Provides cancel/dismiss actions
+- Created UploadProgressList composable for showing all uploads:
+  - Lists all tracked uploads with their progress
+  - Allows clearing completed uploads
+  - Empty state when no uploads
+- Updated DeadmansDropApp to integrate upload tracking:
+  - Connected CameraScreen's onVideoRecorded callback to schedule uploads
+  - Added upload status button with badge showing active upload count
+  - Added bottom sheet to view detailed upload progress
+  - Shows current upload percentage inline
+- Verified: Progress percentage updates during upload (via ProgressRequestBody callback)
+- Verified: Progress notification shows status (via VideoUploadWorker notification updates)
+- Verified: Completion indicated clearly in both notification and UI

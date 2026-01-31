@@ -29,6 +29,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * Data class representing upload progress information.
+ */
+data class UploadProgress(
+    val progressPercent: Int,
+    val bytesUploaded: Long,
+    val totalBytes: Long
+) {
+    companion object {
+        val ZERO = UploadProgress(0, 0L, 0L)
+    }
+}
+
+/**
  * Repository for managing video uploads using WorkManager.
  * Provides reliable background upload functionality that survives app restarts.
  */
@@ -89,6 +102,33 @@ class VideoUploadRepository @Inject constructor(
      */
     fun getUploadStatus(workId: UUID): Flow<WorkInfo?> {
         return workManager.getWorkInfoByIdFlow(workId)
+    }
+
+    /**
+     * Get upload progress as a Flow.
+     *
+     * @param workId UUID of the work request
+     * @return Flow of UploadProgress for observing upload progress
+     */
+    fun getUploadProgress(workId: UUID): Flow<UploadProgress> {
+        return workManager.getWorkInfoByIdFlow(workId).map { workInfo ->
+            workInfo?.let { extractProgress(it) } ?: UploadProgress.ZERO
+        }
+    }
+
+    /**
+     * Extract progress information from WorkInfo.
+     *
+     * @param workInfo The WorkInfo to extract progress from
+     * @return UploadProgress containing the current progress
+     */
+    fun extractProgress(workInfo: WorkInfo): UploadProgress {
+        val progress = workInfo.progress
+        return UploadProgress(
+            progressPercent = progress.getInt(VideoUploadWorker.KEY_PROGRESS_PERCENT, 0),
+            bytesUploaded = progress.getLong(VideoUploadWorker.KEY_BYTES_UPLOADED, 0L),
+            totalBytes = progress.getLong(VideoUploadWorker.KEY_TOTAL_BYTES, 0L)
+        )
     }
 
     /**

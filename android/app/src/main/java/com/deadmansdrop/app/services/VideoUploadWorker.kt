@@ -14,6 +14,7 @@ import androidx.work.WorkerParameters
 import com.deadmansdrop.app.DeadmansDropApplication
 import com.deadmansdrop.app.R
 import com.deadmansdrop.app.data.api.ApiResult
+import com.deadmansdrop.app.data.api.ProgressRequestBody
 import com.deadmansdrop.app.data.api.VideoApiService
 import com.deadmansdrop.app.data.security.CredentialManager
 import dagger.assisted.Assisted
@@ -22,7 +23,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Retrofit
 import java.io.File
@@ -121,7 +121,28 @@ class VideoUploadWorker @AssistedInject constructor(
         val fileSize = videoFile.length()
         Log.d(TAG, "Uploading video: ${videoFile.name}, size: $fileSize bytes")
 
-        val requestBody = videoFile.asRequestBody("video/mp4".toMediaType())
+        // Create progress-tracking request body
+        val requestBody = ProgressRequestBody(
+            file = videoFile,
+            contentType = "video/mp4".toMediaType()
+        ) { bytesWritten, totalBytes ->
+            val progress = if (totalBytes > 0) {
+                ((bytesWritten * 100) / totalBytes).toInt()
+            } else {
+                0
+            }
+            // Update notification with progress
+            updateNotificationProgress(videoFile.name, progress)
+            // Update WorkManager progress for UI observation
+            setProgressAsync(
+                Data.Builder()
+                    .putInt(KEY_PROGRESS_PERCENT, progress)
+                    .putLong(KEY_BYTES_UPLOADED, bytesWritten)
+                    .putLong(KEY_TOTAL_BYTES, totalBytes)
+                    .build()
+            )
+        }
+
         val videoPart = MultipartBody.Part.createFormData(
             "video",
             videoFile.name,
@@ -151,6 +172,18 @@ class VideoUploadWorker @AssistedInject constructor(
                 cause = e
             )
         }
+    }
+
+    private fun updateNotificationProgress(fileName: String, progress: Int) {
+        val notification = NotificationCompat.Builder(applicationContext, DeadmansDropApplication.CHANNEL_UPLOAD_PROGRESS)
+            .setContentTitle("Uploading Video")
+            .setContentText("$fileName - $progress%")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setOngoing(true)
+            .setProgress(100, progress, false)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
     private fun shouldRetry(errorCode: Int?): Boolean {
@@ -253,6 +286,11 @@ class VideoUploadWorker @AssistedInject constructor(
         const val KEY_VIDEO_ID = "video_id"
         const val KEY_UPLOAD_SUCCESS = "upload_success"
         const val KEY_ERROR_MESSAGE = "error_message"
+
+        // Progress data keys
+        const val KEY_PROGRESS_PERCENT = "progress_percent"
+        const val KEY_BYTES_UPLOADED = "bytes_uploaded"
+        const val KEY_TOTAL_BYTES = "total_bytes"
 
         // Retry configuration
         const val MAX_RETRY_ATTEMPTS = 3
