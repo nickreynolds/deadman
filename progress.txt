@@ -3072,3 +3072,19 @@ Task 140: Create WorkManager upload service (Android)
 - All features documented with step-by-step instructions
 - Common workflows explained with practical examples
 - Build and all 812 tests pass
+
+### Task 186: Document system configuration (2026-02-01)
+- Created comprehensive system configuration reference at docs/SYSTEM_CONFIGURATION.md
+- Documented all configuration levels:
+  - Environment variables (required and optional, with types, defaults, and descriptions)
+  - Database-stored system configuration keys (default_storage_quota_bytes, notification_time_utc, video_expiration_days, distribution_check_interval_minutes)
+  - Per-user configuration settings (user-configurable and admin-configurable)
+- Documented Docker configuration (services, volumes, health checks)
+- Documented storage configuration (directory structure, behavior, quota enforcement, cleanup)
+- Documented logging configuration (levels, output formats, log entry fields)
+- Documented Firebase push notification setup and behavior
+- Documented configuration loading order and precedence rules
+- Documented admin API endpoints for configuration management (GET/PATCH /api/admin/config)
+- Included quick reference tables for all default values
+- All config keys documented with default values and impact explanations
+- Build and all 812 tests pass
