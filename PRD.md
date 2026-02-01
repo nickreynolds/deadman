@@ -1189,7 +1189,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Edit user form pre-fills existing values
   - Delete confirmation prevents accidental deletion
   - react-query handles caching and refetching
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 74: Create system config UI**
 - **Category:** Frontend

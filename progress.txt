@@ -2775,3 +2775,34 @@ Task 140: Create WorkManager upload service (Android)
   - server/admin/src/main.tsx (added AuthProvider)
   - server/admin/src/components/Layout.tsx (added logout button, user display)
 
+### Task 73: Create user management UI (2026-02-01)
+- Replaced static placeholder UsersPage with fully functional user management UI using React and react-query
+- Implemented user list fetched from GET /api/admin/users via react-query:
+  - Displays username, role (Admin/User badges), storage usage/quota, creation date
+  - Loading state while fetching
+  - Empty state when no users exist
+  - Error state with descriptive messages
+  - Responsive table (storage and date columns hidden on small screens)
+- Implemented Create User modal (POST /api/admin/users):
+  - Form fields: username, password, storage quota (GB), admin checkbox
+  - Client-side validation (min 3 chars username, min 8 chars password, positive quota)
+  - Server-side error display (e.g., duplicate username)
+  - Loading state during creation
+- Implemented Edit User modal (PATCH /api/admin/users/:id):
+  - Pre-fills existing values (storage quota, admin status)
+  - Shows username as read-only
+  - Displays current storage usage
+  - Client-side validation for quota
+- Implemented Delete User modal (DELETE /api/admin/users/:id):
+  - Confirmation dialog warns about permanent deletion including videos
+  - Loading state during deletion
+  - Error display on failure
+- react-query handles caching and automatic refetching after mutations
+- All modals use consistent ModalOverlay component with backdrop dismiss
+- Styling matches existing Tailwind CSS patterns in the admin panel
+- Admin frontend builds and type-checks cleanly (tsc -b && vite build)
+- Pre-existing server TypeScript errors (Prisma generated types, bigint mismatches) are unrelated
+
+- **Files Modified:**
+  - server/admin/src/pages/UsersPage.tsx (full rewrite with CRUD functionality)
+
