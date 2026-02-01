@@ -2920,3 +2920,29 @@ Task 140: Create WorkManager upload service (Android)
   - android/app/src/test/java/com/deadmansdrop/app/ui/screens/recipients/RecipientsViewModelTest.kt
   - android/app/src/test/java/com/deadmansdrop/app/ui/auth/AuthViewModelTest.kt
 
+### Task 180: Write Android UI tests (2026-02-01)
+- Created Compose UI tests for critical Android app flows using androidTest framework
+- Tests cover login, video list, video detail (check-in), upload progress, and settings screens
+- Added mockk-android and coroutines-test dependencies to androidTest configuration
+- Test summary by screen:
+  - **LoginScreenTest** (8 tests): Form display, prefill server URL, empty field validation, invalid URL validation, password visibility toggle, loading state, successful login callback, error message on failure
+  - **VideoListScreenTest** (7 tests): Empty state display, video list rendering, file size display, error state, video click navigation, delete confirmation dialog, cancel delete dialog
+  - **VideoDetailScreenTest** (9 tests): Active video details display, check-in disabled for distributed videos, check-in confirmation dialog, cancel check-in, perform check-in, delete confirmation, navigate back after delete, error state, distributed status badge
+  - **UploadProgressCardTest** (7 tests): Pending state, uploading state with progress, success state, failed state with error, cancelled state, cancel callback, dismiss callback
+  - **SettingsScreenTest** (9 tests): Account info display, timer section, storage usage, distribution section, logout button, logout confirmation dialog, cancel logout, confirm logout callback, error state, recipients navigation
+- Total: 40 Compose UI tests across 5 test files
+- Note: Java/Android SDK not available in CI environment; tests follow Jetpack Compose testing patterns with createComposeRule() and mock ViewModels
+- Backend tests verified: 27 suites, 807 tests all passing
+- TypeScript build verified: compiles cleanly
+
+- **Files Created:**
+  - android/app/src/androidTest/java/com/deadmansdrop/app/ui/screens/login/LoginScreenTest.kt
+  - android/app/src/androidTest/java/com/deadmansdrop/app/ui/screens/videos/VideoListScreenTest.kt
+  - android/app/src/androidTest/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailScreenTest.kt
+  - android/app/src/androidTest/java/com/deadmansdrop/app/ui/screens/upload/UploadProgressCardTest.kt
+  - android/app/src/androidTest/java/com/deadmansdrop/app/ui/screens/settings/SettingsScreenTest.kt
+
+- **Files Modified:**
+  - android/app/build.gradle.kts (added mockk-android and coroutines-test androidTest deps)
+  - PRD.md (Task 180 status: NOT STARTED -> FINISHED)
+
