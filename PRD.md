@@ -2015,7 +2015,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Token sent after registration
   - Token updates sent when refreshed
   - Backend receives valid token
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 161: Handle notification tap**
 - **Category:** Navigation

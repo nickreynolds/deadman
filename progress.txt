@@ -2546,3 +2546,38 @@ Task 140: Create WorkManager upload service (Android)
   - android/app/src/main/java/com/deadmansdrop/app/ui/auth/AuthViewModel.kt (added FcmTokenManager injection, FCM registration on login and app start)
 
 - **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Hilt DI, coroutines, CredentialManager token storage).
+
+### Task 160: Send FCM token to backend (2026-02-01)
+- Implemented FCM token synchronization with the backend server via PATCH /api/user/settings
+- Created UserApiService Retrofit interface with updateUserSettings endpoint
+- Created UserModels (UpdateUserSettingsRequest, UpdateUserSettingsResponse, UserSettings) data classes
+- Created UserRepository following existing repository pattern (cached Retrofit service, server URL normalization)
+- Updated RepositoryModule to provide UserRepository via Hilt DI
+- Updated FcmTokenManager to:
+  - Accept UserRepository dependency
+  - Call syncFcmTokenIfNeeded() after obtaining token in registerForFcm()
+  - Implement syncFcmTokenIfNeeded() which checks sync status, authentication, and calls PATCH /api/user/settings
+  - On success, marks token as synced via credentialManager.markFcmTokenSynced()
+  - Handles errors gracefully with logging
+- Updated DeadmansDropFirebaseMessagingService to:
+  - Inject FcmTokenManager
+  - Attempt server sync when Firebase delivers a new token via onNewToken()
+  - Use CoroutineScope with SupervisorJob for fire-and-forget sync from the service
+
+- **Token sync flow:**
+  1. On login: AuthViewModel calls registerForFcm() → obtains token → saves locally → syncs to server
+  2. On app restart (already authenticated): Same flow triggered in AuthViewModel init
+  3. On Firebase token refresh: onNewToken() saves locally and attempts server sync
+  4. If sync fails (e.g., network error), token stays marked as unsynced for retry on next registerForFcm() call
+
+- **Files Created:**
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/UserApiService.kt
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/models/UserModels.kt
+  - android/app/src/main/java/com/deadmansdrop/app/data/repository/UserRepository.kt
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/di/RepositoryModule.kt (added UserRepository provider)
+  - android/app/src/main/java/com/deadmansdrop/app/services/FcmTokenManager.kt (added UserRepository dependency, syncFcmTokenIfNeeded method)
+  - android/app/src/main/java/com/deadmansdrop/app/services/DeadmansDropFirebaseMessagingService.kt (added FcmTokenManager injection, sync on new token)
+
+- **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Hilt DI, coroutines, ApiResult, repository pattern with cached Retrofit services).

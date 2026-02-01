@@ -5,6 +5,10 @@ import com.deadmansdrop.app.data.security.CredentialManager
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -17,11 +21,21 @@ class DeadmansDropFirebaseMessagingService : FirebaseMessagingService() {
     @Inject
     lateinit var credentialManager: CredentialManager
 
+    @Inject
+    lateinit var fcmTokenManager: FcmTokenManager
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d(TAG, "New FCM token received")
         credentialManager.saveFcmToken(token)
         Log.d(TAG, "FCM token saved locally, marked as unsynced")
+
+        // Attempt to sync the new token with the server
+        serviceScope.launch {
+            fcmTokenManager.syncFcmTokenIfNeeded()
+        }
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
