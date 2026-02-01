@@ -3053,3 +3053,22 @@ Task 140: Create WorkManager upload service (Android)
 - **Files Modified:**
   - PRD.md (Task 184 status: NOT STARTED -> FINISHED)
 
+
+### Task 185: Create user manual (2026-02-01)
+- Created comprehensive user manual at docs/USER_MANUAL.md
+- Manual covers all mobile app features and workflows:
+  - Overview and key concepts (distribution timer, check-in, recipients, public links)
+  - Getting started guide with requirements and installation
+  - Login screen usage with server URL configuration
+  - Video recording workflow (camera controls, title entry, auto-generate)
+  - Video management (list, detail view, deletion)
+  - Check-in functionality to reset distribution timers
+  - Distribution recipients management (add, remove, email validation)
+  - Settings configuration (timer slider, storage quota display, logout)
+  - Push notifications setup and behavior
+  - Complete video lifecycle documentation (Pending → Active → Distributed → Expired)
+  - FAQ section covering common user questions
+- Manual written from the Android app perspective (iOS app not yet implemented)
+- All features documented with step-by-step instructions
+- Common workflows explained with practical examples
+- Build and all 812 tests pass
