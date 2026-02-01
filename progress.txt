@@ -2806,3 +2806,28 @@ Task 140: Create WorkManager upload service (Android)
 - **Files Modified:**
   - server/admin/src/pages/UsersPage.tsx (full rewrite with CRUD functionality)
 
+### Task 74: Create system config UI (2026-02-01)
+- Replaced placeholder ConfigPage with fully functional system configuration UI
+- Implemented data fetching from GET /api/admin/config using react-query (useQuery)
+- Implemented save functionality via PATCH /api/admin/config using react-query (useMutation)
+- Four configurable settings organized into three sections:
+  - Storage: Default Storage Quota (GB) - converts between GB display and bytes for API
+  - Notifications: Notification Time (UTC) - uses HTML time input for HH:MM format
+  - Distribution: Video Expiry After Distribution (days), Distribution Check Interval (minutes)
+- Client-side validation:
+  - Storage quota must be a positive number
+  - Notification time must be valid HH:MM format (00:00 - 23:59)
+  - Video expiration must be at least 1 day
+  - Distribution check interval must be at least 1 minute
+- Save button disabled when no changes detected (dirty state tracking)
+- Success feedback banner with 3-second auto-dismiss
+- Error display for both validation errors and server errors
+- Loading state while fetching config and during save
+- All inputs disabled during save mutation
+- Follows existing patterns: react-query for data management, Tailwind CSS for styling
+- Admin frontend type-checks cleanly (tsc -b) and builds successfully (vite build)
+- Pre-existing server TypeScript errors are unrelated to this change
+
+- **Files Modified:**
+  - server/admin/src/pages/ConfigPage.tsx (full rewrite with react-query integration)
+

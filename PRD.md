@@ -1200,7 +1200,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Validation prevents invalid values
   - Success/error feedback shown
   - react-query manages config data state
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 75: Add system stats dashboard**
 - **Category:** Frontend
