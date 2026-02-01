@@ -40,4 +40,8 @@
     <string name="notification_permission_rationale">Deadman\'s Drop sends daily check-in reminders to prevent your videos from being distributed. Without notifications, you may miss important reminders.</string>
     <string name="notification_permission_grant">Enable</string>
     <string name="notification_permission_dismiss">Not Now</string>
+
+    <!-- Notification Defaults -->
+    <string name="notification_checkin_default_title">Check-in Reminder</string>
+    <string name="notification_checkin_default_body">You have videos pending distribution. Tap to check in.</string>
 </resources>

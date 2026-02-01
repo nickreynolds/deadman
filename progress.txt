@@ -2581,3 +2581,35 @@ Task 140: Create WorkManager upload service (Android)
   - android/app/src/main/java/com/deadmansdrop/app/services/DeadmansDropFirebaseMessagingService.kt (added FcmTokenManager injection, sync on new token)
 
 - **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Hilt DI, coroutines, ApiResult, repository pattern with cached Retrofit services).
+
+### Task 161: Handle notification tap (2026-02-01)
+- Implemented deep linking from notification taps to the video detail screen
+- **Implementation approach:**
+  1. MainActivity extracts `videoId` from intent extras on both cold start (onCreate) and warm start (onNewIntent)
+  2. `pendingVideoId` state is passed to DeadmansDropApp composable as `navigateToVideoId`
+  3. MainAppContent uses `LaunchedEffect(navigateToVideoId)` to set `selectedVideoId` and navigate to VideoDetailScreen
+  4. After consumption, `onVideoIdConsumed` callback clears the pending state
+  5. `android:launchMode="singleTop"` added to MainActivity so onNewIntent is called instead of creating a new instance
+
+- **Also implemented Tasks 162 & 163 as part of this work:**
+  - Task 162 (Display notification alerts): DeadmansDropFirebaseMessagingService now creates and shows local notifications via NotificationCompat when FCM messages are received, with proper title, body, auto-cancel, and high priority
+  - Task 163 (Create notification channel): Already implemented in DeadmansDropApplication.kt (checkin_reminders and upload_progress channels) - marked as FINISHED
+
+- **Notification tap flow:**
+  1. FCM message received → onMessageReceived() extracts videoId from data payload
+  2. showNotification() builds a PendingIntent with FLAG_ACTIVITY_SINGLE_TOP targeting MainActivity with videoId extra
+  3. Notification shown using NotificationManagerCompat with checkin_reminders channel
+  4. User taps notification → MainActivity receives intent → extracts videoId → passes to DeadmansDropApp → navigates to VideoDetailScreen
+  5. Works from killed state (cold start via onCreate), warm start (onNewIntent), and foreground (notification shown, then tapped)
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/MainActivity.kt (added intent extra extraction, onNewIntent, pendingVideoId state)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added navigateToVideoId/onVideoIdConsumed params, LaunchedEffect for deep link navigation)
+  - android/app/src/main/java/com/deadmansdrop/app/services/DeadmansDropFirebaseMessagingService.kt (replaced TODOs with showNotification() using PendingIntent and NotificationCompat)
+  - android/app/src/main/AndroidManifest.xml (added android:launchMode="singleTop" to MainActivity)
+  - android/app/src/main/res/values/strings.xml (added notification default title/body strings)
+
+- **Files Created:**
+  - android/app/src/main/res/drawable/ic_notification.xml (bell icon vector drawable for notifications)
+
+- **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Compose state management, Hilt DI, PendingIntent with FLAG_IMMUTABLE).

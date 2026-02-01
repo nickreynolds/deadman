@@ -65,6 +65,8 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun DeadmansDropApp(
+    navigateToVideoId: String? = null,
+    onVideoIdConsumed: () -> Unit = {},
     authViewModel: AuthViewModel = hiltViewModel(),
     uploadViewModel: UploadViewModel = hiltViewModel(),
     titleGeneratorViewModel: TitleGeneratorViewModel = hiltViewModel()
@@ -89,7 +91,9 @@ fun DeadmansDropApp(
                 onLogout = { authViewModel.logout() },
                 uploadViewModel = uploadViewModel,
                 uploadUiState = uploadUiState,
-                titleGeneratorViewModel = titleGeneratorViewModel
+                titleGeneratorViewModel = titleGeneratorViewModel,
+                navigateToVideoId = navigateToVideoId,
+                onVideoIdConsumed = onVideoIdConsumed
             )
         }
         else -> {
@@ -114,7 +118,9 @@ private fun MainAppContent(
     onLogout: () -> Unit,
     uploadViewModel: UploadViewModel,
     uploadUiState: com.deadmansdrop.app.ui.screens.upload.UploadUiState,
-    titleGeneratorViewModel: TitleGeneratorViewModel
+    titleGeneratorViewModel: TitleGeneratorViewModel,
+    navigateToVideoId: String? = null,
+    onVideoIdConsumed: () -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
     // Track whether camera screen is shown
@@ -128,6 +134,15 @@ private fun MainAppContent(
     var selectedVideoId by rememberSaveable { mutableStateOf<String?>(null) }
     // Track whether the video list needs to refresh (e.g., after check-in)
     var videoListNeedsRefresh by rememberSaveable { mutableStateOf(false) }
+
+    // Handle deep link navigation from notification tap
+    LaunchedEffect(navigateToVideoId) {
+        if (navigateToVideoId != null) {
+            selectedVideoId = navigateToVideoId
+            showCamera = false
+            onVideoIdConsumed()
+        }
+    }
 
     // Request notification permission on Android 13+ (API 33+)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

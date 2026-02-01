@@ -2024,7 +2024,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Tap opens app to correct video
   - Deep link payload parsed correctly
   - Navigation works from killed state
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 162: Display notification alerts**
 - **Category:** Push Notifications
@@ -2033,7 +2033,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Notifications appear when app backgrounded
   - Alert content formatted correctly
   - Notifications respect user preferences
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 163: Create notification channel**
 - **Category:** Push Notifications
@@ -2042,7 +2042,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Channel created on app startup
   - Channel has appropriate importance level
   - User can customize channel in settings
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 #### 6.3.8 Android Settings
 
