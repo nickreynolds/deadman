@@ -2831,3 +2831,31 @@ Task 140: Create WorkManager upload service (Android)
 - **Files Modified:**
   - server/admin/src/pages/ConfigPage.tsx (full rewrite with react-query integration)
 
+### Task 75: Add system stats dashboard (2026-02-01)
+- Created GET /api/admin/stats backend endpoint for aggregated system statistics
+- Backend stats service queries:
+  - Total users, total videos, and video counts by status (active, pending, distributed, expired)
+  - Aggregated storage used and quota across all users
+  - 5 most recent video uploads (with username, file size, status)
+  - 5 most recent distributions (with username, distribution timestamp)
+- Updated DashboardPage.tsx with react-query integration:
+  - useQuery with ['admin-stats'] query key and 30-second refetch interval
+  - Stats cards showing total users, total videos, active videos, and storage used
+  - Storage usage progress bar with color coding (indigo < 70%, yellow 70-90%, red > 90%)
+  - Video status breakdown section with colored badges and counts
+  - Recent Uploads section showing latest 5 uploads across all users
+  - Recent Distributions section showing latest 5 distributed videos
+  - Loading skeleton states (pulse animations) while data loads
+  - Error state display consistent with other admin pages
+  - Empty states with dashed borders for when no data exists
+- Follows existing patterns: react-query for data management, Tailwind CSS for styling, Bearer token auth
+- Admin frontend type-checks cleanly (tsc -b) and builds successfully (vite build)
+- Pre-existing server TypeScript errors are unrelated to this change
+
+- **Files Created:**
+  - server/src/services/stats.service.ts (system stats aggregation service)
+
+- **Files Modified:**
+  - server/src/routes/admin.routes.ts (added GET /api/admin/stats endpoint)
+  - server/admin/src/pages/DashboardPage.tsx (full rewrite with react-query integration)
+

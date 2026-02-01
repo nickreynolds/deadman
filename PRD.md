@@ -1210,7 +1210,7 @@ Note: Email distribution configuration will be deferred pending additional resea
   - Dashboard loads within reasonable time
   - Key metrics are prominently displayed
   - react-query handles data polling/refreshing
-- **Status:** NOT STARTED
+- **Status:** FINISHED
 
 **Task 76: Serve admin interface from Express**
 - **Category:** Infrastructure

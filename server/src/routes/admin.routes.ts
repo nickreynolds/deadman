@@ -5,6 +5,7 @@
 // DELETE /api/admin/users/:id - Delete a user
 // GET /api/admin/config - Get system configuration
 // PATCH /api/admin/config - Update system configuration
+// GET /api/admin/stats - Get system statistics
 
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireAdmin, getAuthenticatedUser } from '../auth';
@@ -17,6 +18,7 @@ import {
   findUserById,
 } from '../services/user.service';
 import { getAllConfig, setConfigValues } from '../services/config.service';
+import { getSystemStats } from '../services/stats.service';
 import { createChildLogger } from '../logger';
 
 const logger = createChildLogger({ component: 'admin-routes' });
@@ -424,6 +426,31 @@ router.patch('/config', requireAuth, requireAdmin, async (req: Request, res: Res
     res.json({ config: updatedConfig });
   } catch (error) {
     logger.error({ err: error }, 'Error updating system configuration');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/admin/stats
+ * Get system statistics (admin only)
+ *
+ * Response:
+ *   - 200: { stats: { total_users, total_videos, active_videos, distributed_videos, pending_videos, expired_videos, total_storage_used_bytes, total_storage_quota_bytes, recent_uploads: [...], recent_distributions: [...] } }
+ *   - 401: { error: string } - Not authenticated
+ *   - 403: { error: string } - Not an admin
+ *   - 500: { error: string } - Server error
+ */
+router.get('/stats', requireAuth, requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminUser = getAuthenticatedUser(req);
+
+    const stats = await getSystemStats();
+
+    logger.debug({ adminId: adminUser.id }, 'Admin retrieved system statistics');
+
+    res.json({ stats });
+  } catch (error) {
+    logger.error({ err: error }, 'Error retrieving system statistics');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
