@@ -2993,3 +2993,29 @@ Task 140: Create WorkManager upload service (Android)
   - server/src/services/notification.service.test.ts (added 6 platform-specific notification config tests)
   - PRD.md (Task 182 status: NOT STARTED -> FINISHED)
 
+### Task 183: Write API documentation (2026-02-01)
+- Created comprehensive OpenAPI 3.0 specification covering all API endpoints
+- Installed swagger-ui-express and @types/swagger-ui-express
+- Created src/openapi.ts with full OpenAPI 3.0.3 spec including:
+  - All 20 API endpoints documented across 9 tags (Auth, Videos, Check-In, Public, User Settings, Recipients, Admin Users, Admin Config, Admin Stats)
+  - Complete request/response schemas for every endpoint
+  - JWT Bearer authentication security scheme
+  - Reusable component schemas: Error, User, AdminUser, Video, CheckIn, Recipient, UserSettings, SystemStats
+  - All query parameters, path parameters, and request bodies documented
+  - All HTTP status codes and error responses documented
+  - Multipart file upload schema for video upload
+  - HTTP Range header support documented for public video streaming
+  - Rate limiting responses documented (429)
+- Wired up Swagger UI at /api-docs route in Express server
+- Added raw JSON spec endpoint at /api-docs.json
+- All 812 existing tests pass
+- TypeScript builds without errors
+
+- **Files Created:**
+  - server/src/openapi.ts
+
+- **Files Modified:**
+  - server/src/index.ts (added swagger-ui-express import and /api-docs routes)
+  - server/package.json (added swagger-ui-express dependency)
+  - PRD.md (Task 183 status: NOT STARTED -> FINISHED)
+

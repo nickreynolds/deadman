@@ -14,6 +14,8 @@ import { authRoutes, videoRoutes, publicRoutes, userRoutes, adminRoutes } from '
 import { initializeScheduler, shutdownScheduler } from './scheduler';
 import { registerAllJobs } from './jobs';
 import { initializeFirebase, shutdownFirebase } from './services/firebase.service';
+import swaggerUi from 'swagger-ui-express';
+import { openApiSpec } from './openapi';
 
 console.log('Starting Deadman\'s Drop server...');
 // Initialize configuration first - exits if required variables are missing
@@ -72,6 +74,13 @@ app.use('/api/videos', videoRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
+
+// API documentation - Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+// Serve raw OpenAPI JSON spec
+app.get('/api-docs.json', (_req: Request, res: Response) => {
+  res.json(openApiSpec);
+});
 
 // Admin interface - serve React SPA build from /admin
 const adminDistPath = path.join(__dirname, '..', 'admin', 'dist');
