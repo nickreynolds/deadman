@@ -193,62 +193,12 @@ class VideoUploadWorker @AssistedInject constructor(
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
-    /**
-     * Determines if the upload should be retried based on error code and attempt count.
-     *
-     * Retry strategy:
-     * - Network errors (null code): Retry with exponential backoff
-     * - 408 Request Timeout: Always retry (transient)
-     * - 429 Too Many Requests: Always retry (rate limited, backoff will help)
-     * - 500-599 Server errors: Retry (server may recover)
-     * - 401 Unauthorized: Don't retry (auth issue needs user action)
-     * - 413 Payload Too Large: Don't retry (file won't shrink)
-     * - Other 4xx: Don't retry (client error, won't change)
-     *
-     * WorkManager handles backoff automatically with exponential policy configured
-     * in VideoUploadRepository (30s initial, doubling each retry).
-     */
     private fun shouldRetry(errorCode: Int?): Boolean {
-        // Always check attempt count first
-        if (runAttemptCount >= MAX_RETRY_ATTEMPTS) {
-            Log.w(TAG, "Max retry attempts ($MAX_RETRY_ATTEMPTS) reached, not retrying")
-            return false
-        }
-
-        return when (errorCode) {
-            null -> true // Network errors - retry with backoff
-            408 -> true // Request timeout - transient, retry
-            429 -> true // Rate limited - backoff will help
-            in 500..599 -> true // Server errors - may recover
-            401 -> {
-                Log.w(TAG, "Authentication error (401) - user action required")
-                false
-            }
-            413 -> {
-                Log.w(TAG, "Payload too large (413) - file exceeds server limit")
-                false
-            }
-            else -> {
-                Log.w(TAG, "Client error ($errorCode) - not retryable")
-                false
-            }
-        }
+        return shouldRetryForAttempt(errorCode, runAttemptCount)
     }
 
-    /**
-     * Get a user-friendly error message based on the error code.
-     */
     private fun getUserFriendlyErrorMessage(errorCode: Int?, originalMessage: String): String {
-        return when (errorCode) {
-            null -> "Network connection failed. Please check your internet connection."
-            401 -> "Authentication failed. Please log in again."
-            403 -> "Permission denied. You don't have access to upload videos."
-            408 -> "Request timed out. Please try again."
-            413 -> "Video file is too large. Please record a shorter video."
-            429 -> "Too many requests. Please wait and try again."
-            in 500..599 -> "Server error. Please try again later."
-            else -> originalMessage
-        }
+        return getErrorMessage(errorCode, originalMessage)
     }
 
     private fun deleteLocalVideoFile(file: File) {
@@ -353,5 +303,49 @@ class VideoUploadWorker @AssistedInject constructor(
 
         // Retry configuration
         const val MAX_RETRY_ATTEMPTS = 3
+
+        /**
+         * Determines if the upload should be retried based on error code and attempt count.
+         *
+         * Retry strategy:
+         * - Network errors (null code): Retry with exponential backoff
+         * - 408 Request Timeout: Always retry (transient)
+         * - 429 Too Many Requests: Always retry (rate limited, backoff will help)
+         * - 500-599 Server errors: Retry (server may recover)
+         * - 401 Unauthorized: Don't retry (auth issue needs user action)
+         * - 413 Payload Too Large: Don't retry (file won't shrink)
+         * - Other 4xx: Don't retry (client error, won't change)
+         */
+        fun shouldRetryForAttempt(errorCode: Int?, attemptCount: Int): Boolean {
+            if (attemptCount >= MAX_RETRY_ATTEMPTS) {
+                return false
+            }
+
+            return when (errorCode) {
+                null -> true // Network errors - retry with backoff
+                408 -> true // Request timeout - transient, retry
+                429 -> true // Rate limited - backoff will help
+                in 500..599 -> true // Server errors - may recover
+                401 -> false // Authentication error - user action required
+                413 -> false // Payload too large - file exceeds server limit
+                else -> false // Client error - not retryable
+            }
+        }
+
+        /**
+         * Get a user-friendly error message based on the error code.
+         */
+        fun getErrorMessage(errorCode: Int?, originalMessage: String): String {
+            return when (errorCode) {
+                null -> "Network connection failed. Please check your internet connection."
+                401 -> "Authentication failed. Please log in again."
+                403 -> "Permission denied. You don't have access to upload videos."
+                408 -> "Request timed out. Please try again."
+                413 -> "Video file is too large. Please record a shorter video."
+                429 -> "Too many requests. Please wait and try again."
+                in 500..599 -> "Server error. Please try again later."
+                else -> originalMessage
+            }
+        }
     }
 }
