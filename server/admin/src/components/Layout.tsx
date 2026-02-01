@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Outlet, NavLink } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 
 const navItems = [
   { to: '', label: 'Dashboard', icon: DashboardIcon },
@@ -9,6 +10,13 @@ const navItems = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -59,6 +67,19 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+
+        {/* User info + logout */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-gray-700 px-3 py-4">
+          <div className="flex items-center justify-between px-3">
+            <span className="text-sm text-gray-300 truncate">{user?.username}</span>
+            <button
+              onClick={handleLogout}
+              className="text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
       </aside>
 
       {/* Main content area */}
