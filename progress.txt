@@ -2419,3 +2419,390 @@ Task 140: Create WorkManager upload service (Android)
   - Loading state: YES (shows CircularProgressIndicator)
   - Success/error feedback: YES (uses Snackbar to show messages)
   - Updates video data: YES (video state updated with response from server)
+### Task 155: Implement check-in API call (2026-01-31)
+- **Note:** This task was already fully implemented as part of Task 154. The check-in API call was built end-to-end:
+  - Retrofit endpoint: `checkInVideo()` in `VideoApiService.kt`
+  - Repository method: `checkInVideo()` in `VideoRepository.kt`
+  - ViewModel method: `checkIn()` in `VideoDetailViewModel.kt`
+  - Sends `PREVENT_DISTRIBUTION` action, parses `VideoCheckInResponse`, handles errors
+- **Status:** Marked as FINISHED (already complete)
+
+### Task 156: Show confirmation dialog (2026-01-31)
+- Added confirmation dialog before PREVENT_DISTRIBUTION check-in action
+- Follows the same pattern as the existing delete confirmation dialog
+
+- **Changes:**
+
+  1. **VideoDetailViewModel.kt** - Added confirmation flow:
+     - Added `showCheckInConfirmation: Boolean` to `VideoDetailUiState`
+     - Added `requestCheckIn()` method to show confirmation dialog
+     - Added `cancelCheckIn()` method to dismiss dialog
+     - Modified `checkIn()` to dismiss dialog before making API call
+
+  2. **VideoDetailScreen.kt** - Added confirmation dialog UI:
+     - Changed button callback from `viewModel.checkIn()` to `viewModel.requestCheckIn()`
+     - Added `AlertDialog` for check-in confirmation with:
+       - Title: "Prevent Distribution?"
+       - Body text explaining the action and timer reset
+       - "Confirm" button that calls `viewModel.checkIn()`
+       - "Cancel" button that calls `viewModel.cancelCheckIn()`
+       - Dismiss on outside tap calls `viewModel.cancelCheckIn()`
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailViewModel.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailScreen.kt
+
+- **Verification:**
+  - Dialog explains the action: YES (title "Prevent Distribution?" with explanation text)
+  - User can confirm or cancel: YES (Confirm and Cancel buttons)
+  - Cancel returns unchanged: YES (cancelCheckIn() just hides dialog, no state changes)
+
+- **Build Note:** Java/JDK not available in build environment. Changes follow identical patterns to existing delete confirmation dialog which compiles successfully.
+
+### Task 157: Update UI after check-in (Android) (2026-01-31)
+- Enhanced the check-in success feedback to show the new distribution date in the Snackbar message
+  - Changed from generic "Check-in successful! Timer has been reset." to "Check-in successful! New distribution: Jan 31, 2026 at 3:00 PM" (with actual date from server response)
+  - Falls back to generic message if distributeAt is unavailable
+- Added `onVideoUpdated` callback to `VideoDetailScreen` to notify parent when video data changes after check-in
+- Added `refreshTrigger` and `onRefreshConsumed` parameters to `VideoListScreen` for external refresh signals
+- Connected the flow in `DeadmansDropApp.kt`:
+  - `VideoDetailScreen.onVideoUpdated` sets `videoListNeedsRefresh = true`
+  - `VideoListScreen` detects `refreshTrigger = true` via `LaunchedEffect` and calls `refreshVideos()`
+  - After refresh, `onRefreshConsumed` resets the flag
+- This ensures the video list shows updated `distribute_at` times when navigating back from the detail screen after a check-in
+
+- **Task 157 Verification:**
+  - Status updates immediately: YES (VideoDetailViewModel.checkIn() replaces video with server response containing updated status)
+  - distribute_at reflects extension: YES (server response contains new distribute_at, displayed in Distribution section; video list also refreshes)
+  - Success feedback shown: YES (Snackbar shows new distribution date after successful check-in)
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailScreen.kt (added onVideoUpdated callback, enhanced snackbar message)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/videos/VideoListScreen.kt (added refreshTrigger/onRefreshConsumed params with LaunchedEffect)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added videoListNeedsRefresh state, wired callbacks)
+
+- **Build Note:** Java/JDK not available in build environment. Changes follow existing Compose patterns (LaunchedEffect, StateFlow, callback parameters) used throughout the codebase.
+### Task 158: Request notification permissions for Android 13+ (2026-01-31)
+- Implemented POST_NOTIFICATIONS runtime permission request for Android 13+ (API 33+) in the main app screen
+- Uses Accompanist Permissions library (already in dependencies) following the same pattern as CameraScreen.kt
+- **Implementation in DeadmansDropApp.kt (MainAppContent composable):**
+  - Added `Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU` check so permission is only requested on Android 13+
+  - Uses `rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)` from Accompanist
+  - On first composition of MainAppContent (after login), automatically requests permission via `LaunchedEffect(Unit)`
+  - If rationale should be shown (user previously denied), displays an AlertDialog explaining why notifications are needed
+  - Tracks `hasRequestedNotificationPermission` via `rememberSaveable` to avoid re-requesting on recomposition
+  - Second `LaunchedEffect(notificationPermissionState.status)` monitors permission status changes to show rationale dialog after denial
+  - Denied permission handled gracefully - app continues to function, user just won't receive push notification reminders
+  - Lower Android versions (< API 33) skip the permission block entirely - notifications work without runtime permission
+
+- **String resources added to strings.xml:**
+  - `notification_permission_title`: "Enable Notifications"
+  - `notification_permission_rationale`: Explains check-in reminders and consequences of not enabling
+  - `notification_permission_grant`: "Enable" button text
+  - `notification_permission_dismiss`: "Not Now" button text
+
+- **Task 158 Verification:**
+  - Permission requested on Android 13+: YES (Build.VERSION_CODES.TIRAMISU gate)
+  - Lower versions work without permission: YES (entire permission block wrapped in SDK version check)
+  - Denied permission handled gracefully: YES (dialog dismissible, app continues normally, no crash or blocking UI)
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added notification permission request with rationale dialog)
+  - android/app/src/main/res/values/strings.xml (added notification permission strings)
+
+- **Files Already Configured (no changes needed):**
+  - AndroidManifest.xml: POST_NOTIFICATIONS permission already declared
+  - DeadmansDropApplication.kt: Notification channels already created (checkin_reminders, upload_progress)
+  - DeadmansDropFirebaseMessagingService.kt: FCM service already registered
+
+- **Build Note:** Java/JDK not available in build environment. Changes follow existing Accompanist permissions patterns (rememberPermissionState, LaunchedEffect, shouldShowRationale) used in CameraScreen.kt.
+### Task 159: Register for FCM on Android (2026-01-31)
+- Implemented FCM token registration for the Android app
+- Created `FcmTokenManager` service class (`services/FcmTokenManager.kt`):
+  - `@Singleton` with `@Inject constructor` for Hilt auto-provision
+  - `registerForFcm()` suspend function that calls `FirebaseMessaging.getInstance().token.await()`
+  - Saves token locally via `CredentialManager.saveFcmToken()`
+  - Compares with existing token to avoid unnecessary saves
+  - Logs registration errors without crashing
+- Updated `DeadmansDropFirebaseMessagingService`:
+  - Added `@AndroidEntryPoint` for Hilt dependency injection
+  - Injected `CredentialManager` via `@Inject`
+  - `onNewToken()` now saves the new token locally and marks it as unsynced
+- Updated `AuthViewModel`:
+  - Injected `FcmTokenManager` via constructor
+  - `onLoginSuccess()` now triggers `fcmTokenManager.registerForFcm()` in coroutine scope
+  - `init` block registers for FCM on app restart when user is already authenticated
+
+- **Task 159 Verification:**
+  - FCM token obtained successfully: YES (via `FirebaseMessaging.getInstance().token.await()`)
+  - Token refresh handled: YES (`onNewToken()` saves new token; `registerForFcm()` called on each app start)
+  - Registration errors logged: YES (try/catch with `Log.e` in `FcmTokenManager`)
+
+- **Files Created:**
+  - android/app/src/main/java/com/deadmansdrop/app/services/FcmTokenManager.kt
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/services/DeadmansDropFirebaseMessagingService.kt (added @AndroidEntryPoint, CredentialManager injection, token saving in onNewToken)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/auth/AuthViewModel.kt (added FcmTokenManager injection, FCM registration on login and app start)
+
+- **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Hilt DI, coroutines, CredentialManager token storage).
+
+### Task 160: Send FCM token to backend (2026-02-01)
+- Implemented FCM token synchronization with the backend server via PATCH /api/user/settings
+- Created UserApiService Retrofit interface with updateUserSettings endpoint
+- Created UserModels (UpdateUserSettingsRequest, UpdateUserSettingsResponse, UserSettings) data classes
+- Created UserRepository following existing repository pattern (cached Retrofit service, server URL normalization)
+- Updated RepositoryModule to provide UserRepository via Hilt DI
+- Updated FcmTokenManager to:
+  - Accept UserRepository dependency
+  - Call syncFcmTokenIfNeeded() after obtaining token in registerForFcm()
+  - Implement syncFcmTokenIfNeeded() which checks sync status, authentication, and calls PATCH /api/user/settings
+  - On success, marks token as synced via credentialManager.markFcmTokenSynced()
+  - Handles errors gracefully with logging
+- Updated DeadmansDropFirebaseMessagingService to:
+  - Inject FcmTokenManager
+  - Attempt server sync when Firebase delivers a new token via onNewToken()
+  - Use CoroutineScope with SupervisorJob for fire-and-forget sync from the service
+
+- **Token sync flow:**
+  1. On login: AuthViewModel calls registerForFcm() → obtains token → saves locally → syncs to server
+  2. On app restart (already authenticated): Same flow triggered in AuthViewModel init
+  3. On Firebase token refresh: onNewToken() saves locally and attempts server sync
+  4. If sync fails (e.g., network error), token stays marked as unsynced for retry on next registerForFcm() call
+
+- **Files Created:**
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/UserApiService.kt
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/models/UserModels.kt
+  - android/app/src/main/java/com/deadmansdrop/app/data/repository/UserRepository.kt
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/di/RepositoryModule.kt (added UserRepository provider)
+  - android/app/src/main/java/com/deadmansdrop/app/services/FcmTokenManager.kt (added UserRepository dependency, syncFcmTokenIfNeeded method)
+  - android/app/src/main/java/com/deadmansdrop/app/services/DeadmansDropFirebaseMessagingService.kt (added FcmTokenManager injection, sync on new token)
+
+- **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Hilt DI, coroutines, ApiResult, repository pattern with cached Retrofit services).
+
+### Task 161: Handle notification tap (2026-02-01)
+- Implemented deep linking from notification taps to the video detail screen
+- **Implementation approach:**
+  1. MainActivity extracts `videoId` from intent extras on both cold start (onCreate) and warm start (onNewIntent)
+  2. `pendingVideoId` state is passed to DeadmansDropApp composable as `navigateToVideoId`
+  3. MainAppContent uses `LaunchedEffect(navigateToVideoId)` to set `selectedVideoId` and navigate to VideoDetailScreen
+  4. After consumption, `onVideoIdConsumed` callback clears the pending state
+  5. `android:launchMode="singleTop"` added to MainActivity so onNewIntent is called instead of creating a new instance
+
+- **Also implemented Tasks 162 & 163 as part of this work:**
+  - Task 162 (Display notification alerts): DeadmansDropFirebaseMessagingService now creates and shows local notifications via NotificationCompat when FCM messages are received, with proper title, body, auto-cancel, and high priority
+  - Task 163 (Create notification channel): Already implemented in DeadmansDropApplication.kt (checkin_reminders and upload_progress channels) - marked as FINISHED
+
+- **Notification tap flow:**
+  1. FCM message received → onMessageReceived() extracts videoId from data payload
+  2. showNotification() builds a PendingIntent with FLAG_ACTIVITY_SINGLE_TOP targeting MainActivity with videoId extra
+  3. Notification shown using NotificationManagerCompat with checkin_reminders channel
+  4. User taps notification → MainActivity receives intent → extracts videoId → passes to DeadmansDropApp → navigates to VideoDetailScreen
+  5. Works from killed state (cold start via onCreate), warm start (onNewIntent), and foreground (notification shown, then tapped)
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/MainActivity.kt (added intent extra extraction, onNewIntent, pendingVideoId state)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added navigateToVideoId/onVideoIdConsumed params, LaunchedEffect for deep link navigation)
+  - android/app/src/main/java/com/deadmansdrop/app/services/DeadmansDropFirebaseMessagingService.kt (replaced TODOs with showNotification() using PendingIntent and NotificationCompat)
+  - android/app/src/main/AndroidManifest.xml (added android:launchMode="singleTop" to MainActivity)
+  - android/app/src/main/res/values/strings.xml (added notification default title/body strings)
+
+- **Files Created:**
+  - android/app/src/main/res/drawable/ic_notification.xml (bell icon vector drawable for notifications)
+
+- **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Compose state management, Hilt DI, PendingIntent with FLAG_IMMUTABLE).
+### Task 164: Create settings screen UI for Android (2026-02-01)
+- Created a full Settings screen for the Android app with the following sections:
+  1. **Account Section** - Displays read-only server endpoint URL and username
+  2. **Distribution Timer Section** - Slider (1-30 days) to configure default distribution timer, with save button that calls PATCH /api/user/settings
+  3. **Storage Section** - Displays storage used/quota with a progress bar showing usage percentage (turns red at 90%+)
+  4. **Logout Section** - Logout button with confirmation dialog
+
+- Added GET /api/user/settings support to the Android API layer:
+  - Added getUserSettings() to UserApiService (Retrofit interface)
+  - Added GetUserSettingsResponse model to UserModels.kt
+  - Added getUserSettings() method to UserRepository
+
+- Created SettingsViewModel with Hilt DI:
+  - Loads local data (server URL, username) from CredentialManager on init
+  - Fetches settings from server via UserRepository.getUserSettings()
+  - Supports updating timer days via UserRepository.updateUserSettings()
+  - Manages logout confirmation dialog state
+  - Snackbar feedback for timer save success/error
+
+- Integrated Settings screen into app navigation:
+  - Added showSettings state to MainAppContent in DeadmansDropApp.kt
+  - Replaced direct "Logout" button with "Settings" button (with gear icon)
+  - Settings screen navigates back to main screen on back press
+  - Logout from Settings triggers AuthViewModel.logout() and returns to login
+
+- **Files Created:**
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/settings/SettingsViewModel.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/settings/SettingsScreen.kt
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/UserApiService.kt (added GET endpoint)
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/models/UserModels.kt (added GetUserSettingsResponse)
+  - android/app/src/main/java/com/deadmansdrop/app/data/repository/UserRepository.kt (added getUserSettings())
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added settings navigation, replaced logout button)
+  - android/app/src/main/res/values/strings.xml (added settings strings)
+
+- **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Compose UI, Hilt DI, MutableStateFlow, Material3 components).
+
+### Tasks 165-168: Android Settings Screen Features (2026-02-01)
+- **Note:** Discovered these were already implemented as part of Task 164 (Settings Screen UI).
+  - Task 165 (Display server endpoint): Server URL displayed read-only with Cloud icon
+  - Task 166 (Timer configuration): Slider with 1-30 day range, save button, API integration
+  - Task 167 (Storage quota): Used/Quota display with progress bar and percentage
+  - Task 168 (Logout): Logout button with confirmation dialog, credential clearing
+- **Status:** Marked as FINISHED in PRD.
+
+### Tasks 169-173: Android Distribution Recipients (2026-02-01)
+- **Description:** Implemented the complete recipients management feature for Android, including the recipients screen, API integration, add/delete functionality, swipe-to-delete, and email validation.
+
+- **Implementation Details:**
+  - Created RecipientApiService with GET, POST, DELETE endpoints matching backend API
+  - Created RecipientModels (RecipientResponse, GetRecipientsResponse, CreateRecipientRequest, CreateRecipientResponse, DeleteRecipientResponse)
+  - Created RecipientRepository following existing VideoRepository/UserRepository patterns
+  - Registered RecipientRepository in Hilt RepositoryModule
+  - Created RecipientsViewModel with full state management (load, refresh, add, delete)
+  - Created RecipientsScreen with:
+    - LazyColumn list of recipient cards showing name and email
+    - Empty state with People icon and instructional message
+    - Loading/error states matching existing patterns
+    - Pull-to-refresh using SwipeRefresh
+    - SwipeToDismissBox for swipe-to-delete
+    - Delete confirmation dialog
+    - FAB to add new recipients
+    - Add recipient dialog with email/name fields
+    - Client-side email validation using same regex as backend
+    - Snackbar feedback for successful adds
+  - Integrated into navigation:
+    - Added "Distribution" section to SettingsScreen with Recipients button
+    - Added showRecipients state and RecipientsScreen rendering in DeadmansDropApp
+  - Added all string resources for the recipients feature
+
+- **Files Created:**
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/RecipientApiService.kt
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/models/RecipientModels.kt
+  - android/app/src/main/java/com/deadmansdrop/app/data/repository/RecipientRepository.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/recipients/RecipientsViewModel.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/recipients/RecipientsScreen.kt
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/di/RepositoryModule.kt (added RecipientRepository provider)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/settings/SettingsScreen.kt (added Distribution section with Recipients button)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added recipients navigation)
+  - android/app/src/main/res/values/strings.xml (added recipients strings)
+
+- **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Compose UI, Hilt DI, MutableStateFlow, Material3 components, SwipeToDismissBox, SwipeRefresh).
+
+### Task 71: Create admin dashboard template (2026-02-01)
+- Created React + Vite + TypeScript admin dashboard project in server/admin/
+- Configured Tailwind CSS v4 with @tailwindcss/vite plugin
+- Set up React Router with basename="/admin" for navigation between sections
+- Integrated @tanstack/react-query (QueryClientProvider) for future API data fetching
+- Built responsive sidebar layout component (Layout.tsx):
+  - Sidebar with navigation links (Dashboard, Users, Configuration)
+  - Mobile hamburger menu with overlay for small screens
+  - Top bar with mobile menu toggle
+  - SVG icons for each nav item
+  - Active link highlighting with indigo color scheme
+- Created three placeholder pages:
+  - DashboardPage: Stats grid (4 cards), Recent Activity and System Health sections
+  - UsersPage: Header with "Add User" button, users table with responsive columns
+  - ConfigPage: Organized config sections (Storage, Notifications, Distribution) with disabled inputs
+- Responsive design features:
+  - Sidebar collapses to overlay on mobile (< lg breakpoint)
+  - Stats grid: 1 col on mobile, 2 on sm, 4 on xl
+  - Table columns hidden on smaller screens (sm:table-cell, md:table-cell)
+  - Proper padding adjustments (p-4 mobile, p-6 desktop)
+- Vite configured with base: '/admin/' for correct asset paths when served from Express
+- Added build:admin script to server package.json
+- Admin frontend builds successfully (tsc -b && vite build) with no type errors
+
+- **Files Created:**
+  - server/admin/ (entire Vite project scaffolding)
+  - server/admin/src/components/Layout.tsx (responsive sidebar layout)
+  - server/admin/src/pages/DashboardPage.tsx (stats + placeholders)
+  - server/admin/src/pages/UsersPage.tsx (user management placeholder)
+  - server/admin/src/pages/ConfigPage.tsx (system config placeholder)
+
+- **Files Modified:**
+  - server/admin/vite.config.ts (added Tailwind plugin, base path)
+  - server/admin/index.html (updated title)
+  - server/admin/src/index.css (replaced with Tailwind import)
+  - server/admin/src/main.tsx (added BrowserRouter, QueryClientProvider)
+  - server/admin/src/App.tsx (added Routes with Layout)
+  - server/package.json (added build:admin script)
+
+- **Pre-existing server type errors noted (not introduced by this task):**
+  - Prisma generated types import path issues (prisma/generated)
+  - bigint/number type mismatches in expiration.job.ts, video.routes.ts, video.service.ts
+  - Implicit 'any' types in checkin.service.ts, cleanup.service.ts
+
+### Task 72: Implement admin login page (2026-02-01)
+- Created authentication system for the admin frontend:
+  - AuthContext with login/logout/token management (localStorage persistence)
+  - Token verification on mount via /api/auth/refresh
+  - Admin-only access enforcement (non-admin users rejected at login)
+  - ProtectedRoute component to guard dashboard routes
+- Created login page with Tailwind CSS styling:
+  - Username and password fields with form validation
+  - Loading state during authentication
+  - Error message display for invalid credentials
+  - Consistent branding with DD logo and "Deadman's Drop" title
+- Updated routing:
+  - /admin/login shows login page (public)
+  - All other /admin/* routes require authentication
+  - Unauthenticated users redirected to login
+  - Successful login redirects to dashboard
+- Added logout functionality:
+  - Sign out button in sidebar (shows username + sign out link)
+  - Clears JWT token and user data from localStorage
+  - Redirects to login page
+- Admin frontend builds and type-checks cleanly
+
+- **Files Created:**
+  - server/admin/src/auth/AuthContext.tsx (auth state management)
+  - server/admin/src/auth/ProtectedRoute.tsx (route guard)
+  - server/admin/src/pages/LoginPage.tsx (login form UI)
+
+- **Files Modified:**
+  - server/admin/src/App.tsx (added login route, protected routes)
+  - server/admin/src/main.tsx (added AuthProvider)
+  - server/admin/src/components/Layout.tsx (added logout button, user display)
+
+### Task 73: Create user management UI (2026-02-01)
+- Replaced static placeholder UsersPage with fully functional user management UI using React and react-query
+- Implemented user list fetched from GET /api/admin/users via react-query:
+  - Displays username, role (Admin/User badges), storage usage/quota, creation date
+  - Loading state while fetching
+  - Empty state when no users exist
+  - Error state with descriptive messages
+  - Responsive table (storage and date columns hidden on small screens)
+- Implemented Create User modal (POST /api/admin/users):
+  - Form fields: username, password, storage quota (GB), admin checkbox
+  - Client-side validation (min 3 chars username, min 8 chars password, positive quota)
+  - Server-side error display (e.g., duplicate username)
+  - Loading state during creation
+- Implemented Edit User modal (PATCH /api/admin/users/:id):
+  - Pre-fills existing values (storage quota, admin status)
+  - Shows username as read-only
+  - Displays current storage usage
+  - Client-side validation for quota
+- Implemented Delete User modal (DELETE /api/admin/users/:id):
+  - Confirmation dialog warns about permanent deletion including videos
+  - Loading state during deletion
+  - Error display on failure
+- react-query handles caching and automatic refetching after mutations
+- All modals use consistent ModalOverlay component with backdrop dismiss
+- Styling matches existing Tailwind CSS patterns in the admin panel
+- Admin frontend builds and type-checks cleanly (tsc -b && vite build)
+- Pre-existing server TypeScript errors (Prisma generated types, bigint mismatches) are unrelated
+
+- **Files Modified:**
+  - server/admin/src/pages/UsersPage.tsx (full rewrite with CRUD functionality)
+

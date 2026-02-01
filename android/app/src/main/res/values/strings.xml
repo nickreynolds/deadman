@@ -34,4 +34,55 @@
 
     <!-- Main Screen -->
     <string name="main_record_video">Record Video</string>
+
+    <!-- Notification Permission -->
+    <string name="notification_permission_title">Enable Notifications</string>
+    <string name="notification_permission_rationale">Deadman\'s Drop sends daily check-in reminders to prevent your videos from being distributed. Without notifications, you may miss important reminders.</string>
+    <string name="notification_permission_grant">Enable</string>
+    <string name="notification_permission_dismiss">Not Now</string>
+
+    <!-- Notification Defaults -->
+    <string name="notification_checkin_default_title">Check-in Reminder</string>
+    <string name="notification_checkin_default_body">You have videos pending distribution. Tap to check in.</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_retry">Retry</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_server_label">Server</string>
+    <string name="settings_username_label">Username</string>
+    <string name="settings_section_timer">Distribution Timer</string>
+    <string name="settings_timer_label">Default Timer</string>
+    <string name="settings_timer_description">New videos will be distributed after this many days without a check-in.</string>
+    <string name="settings_timer_save">Save Timer</string>
+    <string name="settings_timer_saving">Saving…</string>
+    <string name="settings_section_storage">Storage</string>
+    <string name="settings_storage_used_label">Used</string>
+    <string name="settings_storage_quota_label">Quota</string>
+    <string name="settings_logout_button">Log Out</string>
+    <string name="settings_logout_confirm_title">Log Out?</string>
+    <string name="settings_logout_confirm_message">Are you sure you want to log out? You will need to sign in again.</string>
+    <string name="settings_logout_confirm_button">Log Out</string>
+    <string name="settings_cancel">Cancel</string>
+    <string name="settings_section_recipients">Distribution</string>
+
+    <!-- Recipients Screen -->
+    <string name="settings_recipients_button">Distribution Recipients</string>
+    <string name="recipients_title">Recipients</string>
+    <string name="recipients_back">Back</string>
+    <string name="recipients_retry">Retry</string>
+    <string name="recipients_empty_title">No recipients</string>
+    <string name="recipients_empty_message">Add recipients who will receive your videos when distributed.</string>
+    <string name="recipients_add_button">Add recipient</string>
+    <string name="recipients_add_title">Add Recipient</string>
+    <string name="recipients_email_label">Email</string>
+    <string name="recipients_email_placeholder">recipient@example.com</string>
+    <string name="recipients_name_label">Name (optional)</string>
+    <string name="recipients_name_placeholder">Recipient name</string>
+    <string name="recipients_add_confirm">Add</string>
+    <string name="recipients_cancel">Cancel</string>
+    <string name="recipients_delete_title">Remove Recipient?</string>
+    <string name="recipients_delete_message">Are you sure you want to remove %1$s from your distribution list?</string>
+    <string name="recipients_delete_confirm">Remove</string>
 </resources>

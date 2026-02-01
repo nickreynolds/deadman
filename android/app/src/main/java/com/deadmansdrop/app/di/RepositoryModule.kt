@@ -1,5 +1,7 @@
 package com.deadmansdrop.app.di
 
+import com.deadmansdrop.app.data.repository.RecipientRepository
+import com.deadmansdrop.app.data.repository.UserRepository
 import com.deadmansdrop.app.data.repository.VideoRepository
 import com.deadmansdrop.app.data.security.CredentialManager
 import dagger.Module
@@ -24,5 +26,23 @@ object RepositoryModule {
         retrofitBuilder: Retrofit.Builder
     ): VideoRepository {
         return VideoRepository(credentialManager, retrofitBuilder)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserRepository(
+        credentialManager: CredentialManager,
+        retrofitBuilder: Retrofit.Builder
+    ): UserRepository {
+        return UserRepository(credentialManager, retrofitBuilder)
+    }
+
+    @Provides
+    @Singleton
+    fun provideRecipientRepository(
+        credentialManager: CredentialManager,
+        retrofitBuilder: Retrofit.Builder
+    ): RecipientRepository {
+        return RecipientRepository(credentialManager, retrofitBuilder)
     }
 }

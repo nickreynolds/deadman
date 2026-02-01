@@ -73,6 +73,7 @@ import java.time.format.DateTimeFormatter
 fun VideoDetailScreen(
     videoId: String,
     onBack: () -> Unit,
+    onVideoUpdated: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: VideoDetailViewModel = hiltViewModel()
 ) {
@@ -91,10 +92,17 @@ fun VideoDetailScreen(
         }
     }
 
-    // Show check-in success message
+    // Show check-in success message with new distribution date
     LaunchedEffect(uiState.checkInSuccess) {
         if (uiState.checkInSuccess) {
-            snackbarHostState.showSnackbar("Check-in successful! Timer has been reset.")
+            val newDate = uiState.video?.distributeAt?.let { formatDateTime(it) }
+            val message = if (newDate != null) {
+                "Check-in successful! New distribution: $newDate"
+            } else {
+                "Check-in successful! Timer has been reset."
+            }
+            snackbarHostState.showSnackbar(message)
+            onVideoUpdated()
             viewModel.clearCheckInSuccess()
         }
     }
@@ -173,12 +181,41 @@ fun VideoDetailScreen(
                     VideoDetailContent(
                         video = uiState.video!!,
                         isCheckingIn = uiState.isCheckingIn,
-                        onCheckIn = { viewModel.checkIn() },
+                        onCheckIn = { viewModel.requestCheckIn() },
                         onDelete = { viewModel.requestDelete() }
                     )
                 }
             }
         }
+    }
+
+    // Check-in confirmation dialog
+    if (uiState.showCheckInConfirmation) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelCheckIn() },
+            title = { Text("Prevent Distribution?") },
+            text = {
+                Column {
+                    Text("This will reset the distribution timer for \"${uiState.video?.title ?: "this video"}\".")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "The video will not be distributed until the timer expires again.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.checkIn() }) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelCheckIn() }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Delete confirmation dialog
