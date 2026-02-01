@@ -2699,3 +2699,47 @@ Task 140: Create WorkManager upload service (Android)
 
 - **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Compose UI, Hilt DI, MutableStateFlow, Material3 components, SwipeToDismissBox, SwipeRefresh).
 
+### Task 71: Create admin dashboard template (2026-02-01)
+- Created React + Vite + TypeScript admin dashboard project in server/admin/
+- Configured Tailwind CSS v4 with @tailwindcss/vite plugin
+- Set up React Router with basename="/admin" for navigation between sections
+- Integrated @tanstack/react-query (QueryClientProvider) for future API data fetching
+- Built responsive sidebar layout component (Layout.tsx):
+  - Sidebar with navigation links (Dashboard, Users, Configuration)
+  - Mobile hamburger menu with overlay for small screens
+  - Top bar with mobile menu toggle
+  - SVG icons for each nav item
+  - Active link highlighting with indigo color scheme
+- Created three placeholder pages:
+  - DashboardPage: Stats grid (4 cards), Recent Activity and System Health sections
+  - UsersPage: Header with "Add User" button, users table with responsive columns
+  - ConfigPage: Organized config sections (Storage, Notifications, Distribution) with disabled inputs
+- Responsive design features:
+  - Sidebar collapses to overlay on mobile (< lg breakpoint)
+  - Stats grid: 1 col on mobile, 2 on sm, 4 on xl
+  - Table columns hidden on smaller screens (sm:table-cell, md:table-cell)
+  - Proper padding adjustments (p-4 mobile, p-6 desktop)
+- Vite configured with base: '/admin/' for correct asset paths when served from Express
+- Added build:admin script to server package.json
+- Admin frontend builds successfully (tsc -b && vite build) with no type errors
+
+- **Files Created:**
+  - server/admin/ (entire Vite project scaffolding)
+  - server/admin/src/components/Layout.tsx (responsive sidebar layout)
+  - server/admin/src/pages/DashboardPage.tsx (stats + placeholders)
+  - server/admin/src/pages/UsersPage.tsx (user management placeholder)
+  - server/admin/src/pages/ConfigPage.tsx (system config placeholder)
+
+- **Files Modified:**
+  - server/admin/vite.config.ts (added Tailwind plugin, base path)
+  - server/admin/index.html (updated title)
+  - server/admin/src/index.css (replaced with Tailwind import)
+  - server/admin/src/main.tsx (added BrowserRouter, QueryClientProvider)
+  - server/admin/src/App.tsx (added Routes with Layout)
+  - server/package.json (added build:admin script)
+
+- **Pre-existing server type errors noted (not introduced by this task):**
+  - Prisma generated types import path issues (prisma/generated)
+  - bigint/number type mismatches in expiration.job.ts, video.routes.ts, video.service.ts
+  - Implicit 'any' types in checkin.service.ts, cleanup.service.ts
+
