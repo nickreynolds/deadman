@@ -1,5 +1,6 @@
 // Deadman's Drop Server Entry Point
 
+import path from 'path';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -21,7 +22,18 @@ const config = initializeConfig();
 const app = express();
 
 // Security middleware - adds various HTTP headers for security
-app.use(helmet());
+// Configure CSP to allow loading admin interface assets from same origin
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+    },
+  },
+}));
 
 // CORS middleware - enables Cross-Origin Resource Sharing
 app.use(cors());
@@ -60,6 +72,14 @@ app.use('/api/videos', videoRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Admin interface - serve React SPA build from /admin
+const adminDistPath = path.join(__dirname, '..', 'admin', 'dist');
+app.use('/admin', express.static(adminDistPath));
+// SPA fallback: serve index.html for any /admin/* route not matched by static files
+app.get('/admin/*', (_req: Request, res: Response) => {
+  res.sendFile(path.join(adminDistPath, 'index.html'));
+});
 
 // 404 handler for undefined routes
 app.use((_req: Request, res: Response) => {

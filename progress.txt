@@ -2859,3 +2859,25 @@ Task 140: Create WorkManager upload service (Android)
   - server/src/routes/admin.routes.ts (added GET /api/admin/stats endpoint)
   - server/admin/src/pages/DashboardPage.tsx (full rewrite with react-query integration)
 
+### Task 76: Serve admin interface from Express (2026-02-01)
+- Configured Express to serve the React admin interface build on /admin/* routes
+- Added `path` import to server entry point
+- Added `express.static()` middleware to serve admin dist files from `/admin`
+- Added SPA fallback route (`/admin/*`) that serves `index.html` for React Router client-side routing
+- Configured helmet Content Security Policy to allow loading admin assets:
+  - `defaultSrc: ['self']` - restrict default sources to same origin
+  - `scriptSrc: ['self']` - allow scripts from same origin (admin JS bundle)
+  - `styleSrc: ['self', 'unsafe-inline']` - allow styles from same origin + inline (Tailwind)
+  - `imgSrc: ['self', 'data:']` - allow images from same origin and data URIs
+  - `connectSrc: ['self']` - allow API fetch calls to same origin
+- Admin dist path resolves to `server/admin/dist/` relative to compiled output
+- Static file serving placed after API routes but before 404 handler to ensure:
+  - API routes take priority over static files
+  - Admin routes take priority over 404 responses
+  - Non-admin, non-API routes still return 404 JSON
+- TypeScript build passes cleanly (0 new errors)
+- All 27 test suites pass (807 tests)
+
+- **Files Modified:**
+  - server/src/index.ts (added path import, express.static for admin, SPA fallback, helmet CSP config)
+
