@@ -134,6 +134,138 @@ describe('Notification Service', () => {
         );
       });
 
+      it('should include Android high priority for background delivery', async () => {
+        mockSendFcmMessage.mockResolvedValue('message-id-android');
+
+        const payload: CheckInReminderPayload = {
+          fcmToken: 'android-device-token',
+          userId: 'user-1',
+          videoId: 'video-1',
+          videoTitle: 'Important Video',
+          timeUntilDistribution: '3 days',
+        };
+
+        await sendCheckInReminder(payload);
+
+        expect(mockSendFcmMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            android: expect.objectContaining({
+              priority: 'high',
+            }),
+          })
+        );
+      });
+
+      it('should include APNS high priority and content-available for iOS background handling', async () => {
+        mockSendFcmMessage.mockResolvedValue('message-id-apns');
+
+        const payload: CheckInReminderPayload = {
+          fcmToken: 'ios-device-token',
+          userId: 'user-1',
+          videoId: 'video-1',
+          videoTitle: 'Important Video',
+          timeUntilDistribution: '1 day',
+        };
+
+        await sendCheckInReminder(payload);
+
+        expect(mockSendFcmMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            apns: expect.objectContaining({
+              headers: expect.objectContaining({
+                'apns-priority': '10',
+              }),
+              payload: expect.objectContaining({
+                aps: expect.objectContaining({
+                  contentAvailable: true,
+                  sound: 'default',
+                }),
+              }),
+            }),
+          })
+        );
+      });
+
+      it('should include both notification and data payloads for foreground and background handling', async () => {
+        mockSendFcmMessage.mockResolvedValue('message-id-both');
+
+        const payload: CheckInReminderPayload = {
+          fcmToken: 'device-token',
+          userId: 'user-1',
+          videoId: 'video-1',
+          videoTitle: 'Test Video',
+          timeUntilDistribution: '2 days',
+        };
+
+        await sendCheckInReminder(payload);
+
+        // Notification payload: shown by system when app is in background
+        // Data payload: processed by app when in foreground, also available on background tap
+        const sentMessage = mockSendFcmMessage.mock.calls[0]![0] as unknown as Record<string, unknown>;
+        expect(sentMessage).toHaveProperty('notification');
+        expect(sentMessage).toHaveProperty('data');
+        expect(sentMessage.notification).toEqual(
+          expect.objectContaining({
+            title: expect.any(String),
+            body: expect.any(String),
+          })
+        );
+        expect(sentMessage.data).toEqual(
+          expect.objectContaining({
+            type: 'CHECK_IN_REMINDER',
+            videoId: 'video-1',
+            action: 'OPEN_VIDEO',
+          })
+        );
+      });
+
+      it('should include Android TTL for notification expiry', async () => {
+        mockSendFcmMessage.mockResolvedValue('message-id-ttl');
+
+        const payload: CheckInReminderPayload = {
+          fcmToken: 'device-token',
+          userId: 'user-1',
+          videoId: 'video-1',
+          videoTitle: 'Test Video',
+          timeUntilDistribution: '5 hours',
+        };
+
+        await sendCheckInReminder(payload);
+
+        expect(mockSendFcmMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            android: expect.objectContaining({
+              ttl: 86400, // 24 hours
+            }),
+          })
+        );
+      });
+
+      it('should include deep link data for tap navigation', async () => {
+        mockSendFcmMessage.mockResolvedValue('message-id-deeplink');
+
+        const payload: CheckInReminderPayload = {
+          fcmToken: 'device-token',
+          userId: 'user-42',
+          videoId: 'video-99',
+          videoTitle: 'Deep Link Video',
+          timeUntilDistribution: '6 hours',
+        };
+
+        await sendCheckInReminder(payload);
+
+        expect(mockSendFcmMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              videoId: 'video-99',
+              userId: 'user-42',
+              videoTitle: 'Deep Link Video',
+              action: 'OPEN_VIDEO',
+            }),
+          })
+        );
+      });
+
       it('should return failure when Firebase returns null', async () => {
         mockSendFcmMessage.mockResolvedValue(null);
 

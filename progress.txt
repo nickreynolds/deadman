@@ -2970,3 +2970,26 @@ Task 140: Create WorkManager upload service (Android)
   - android/app/src/main/java/com/deadmansdrop/app/services/VideoUploadWorker.kt (extracted retry/error logic to companion for testability)
   - PRD.md (Task 181 status: NOT STARTED -> FINISHED)
 
+### Task 182: Test push notifications (2026-02-01)
+- **What was done:** Created comprehensive push notification tests for both backend and Android platforms.
+- **Backend Tests Added** (6 new tests in notification.service.test.ts):
+  - Android high priority setting for background delivery
+  - APNS high priority and content-available for iOS background handling
+  - Both notification and data payloads present for foreground/background handling
+  - Android TTL for notification expiry (24 hours)
+  - Deep link data included for tap navigation (videoId, userId, action)
+  - All 28 notification service tests pass (812 total backend tests pass)
+- **Android Tests Created** (22 tests in FcmTokenManagerTest.kt):
+  - **registerForFcm** (8 tests): Token obtained and returned, new token saved locally, unchanged synced token not re-saved, null existing token saved, Firebase exception returns null, sync attempted after token obtained, sync failure doesn't crash, token change detection
+  - **syncFcmTokenIfNeeded** (8 tests): Skips when already synced, skips when no token, skips when blank token, defers when not authenticated, sends token when authenticated, marks synced on success, does not mark synced on API error, does not mark synced on exception
+  - **Edge cases** (6 tests): Empty string token, exception resilience, unchanged unsynced token triggers sync, concurrent token refresh, token change saves new token
+- TypeScript type checks pass
+- Note: Android tests cannot be executed in CI (no JAVA_HOME); tests follow JUnit4 + MockK + coroutines-test patterns matching existing test conventions
+
+- **Files Created:**
+  - android/app/src/test/java/com/deadmansdrop/app/services/FcmTokenManagerTest.kt
+
+- **Files Modified:**
+  - server/src/services/notification.service.test.ts (added 6 platform-specific notification config tests)
+  - PRD.md (Task 182 status: NOT STARTED -> FINISHED)
+
