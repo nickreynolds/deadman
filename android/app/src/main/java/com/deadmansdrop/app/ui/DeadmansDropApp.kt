@@ -48,6 +48,7 @@ import com.deadmansdrop.app.ui.auth.AuthViewModel
 import com.deadmansdrop.app.ui.screens.camera.CameraScreen
 import com.deadmansdrop.app.ui.screens.camera.VideoTitleDialog
 import com.deadmansdrop.app.ui.screens.login.LoginScreen
+import com.deadmansdrop.app.ui.screens.recipients.RecipientsScreen
 import com.deadmansdrop.app.ui.screens.settings.SettingsScreen
 import com.deadmansdrop.app.ui.screens.upload.UploadProgressList
 import com.deadmansdrop.app.ui.screens.upload.UploadStatus
@@ -129,6 +130,8 @@ private fun MainAppContent(
     var showCamera by rememberSaveable { mutableStateOf(false) }
     // Track whether settings screen is shown
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    // Track whether recipients screen is shown
+    var showRecipients by rememberSaveable { mutableStateOf(false) }
     // Track whether upload progress sheet is shown
     var showUploadSheet by rememberSaveable { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -242,12 +245,19 @@ private fun MainAppContent(
         )
     }
 
-    if (showSettings) {
+    if (showRecipients) {
+        RecipientsScreen(
+            onBack = { showRecipients = false }
+        )
+    } else if (showSettings) {
         SettingsScreen(
             onBack = { showSettings = false },
             onLogout = {
                 showSettings = false
                 onLogout()
+            },
+            onNavigateToRecipients = {
+                showRecipients = true
             }
         )
     } else if (showCamera) {

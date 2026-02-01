@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Timer
@@ -70,6 +71,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToRecipients: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -161,7 +163,8 @@ fun SettingsScreen(
                     SettingsContent(
                         uiState = uiState,
                         onUpdateTimer = { days -> viewModel.updateTimerDays(days) },
-                        onRequestLogout = { viewModel.requestLogout() }
+                        onRequestLogout = { viewModel.requestLogout() },
+                        onNavigateToRecipients = onNavigateToRecipients
                     )
                 }
             }
@@ -204,6 +207,7 @@ private fun SettingsContent(
     uiState: SettingsUiState,
     onUpdateTimer: (Int) -> Unit,
     onRequestLogout: () -> Unit,
+    onNavigateToRecipients: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -313,6 +317,24 @@ private fun SettingsContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Recipients Section
+        SectionHeader(title = stringResource(R.string.settings_section_recipients))
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = onNavigateToRecipients,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Filled.People,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.settings_recipients_button))
         }
 
         Spacer(modifier = Modifier.height(32.dp))

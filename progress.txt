@@ -2651,3 +2651,51 @@ Task 140: Create WorkManager upload service (Android)
 
 - **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Compose UI, Hilt DI, MutableStateFlow, Material3 components).
 
+### Tasks 165-168: Android Settings Screen Features (2026-02-01)
+- **Note:** Discovered these were already implemented as part of Task 164 (Settings Screen UI).
+  - Task 165 (Display server endpoint): Server URL displayed read-only with Cloud icon
+  - Task 166 (Timer configuration): Slider with 1-30 day range, save button, API integration
+  - Task 167 (Storage quota): Used/Quota display with progress bar and percentage
+  - Task 168 (Logout): Logout button with confirmation dialog, credential clearing
+- **Status:** Marked as FINISHED in PRD.
+
+### Tasks 169-173: Android Distribution Recipients (2026-02-01)
+- **Description:** Implemented the complete recipients management feature for Android, including the recipients screen, API integration, add/delete functionality, swipe-to-delete, and email validation.
+
+- **Implementation Details:**
+  - Created RecipientApiService with GET, POST, DELETE endpoints matching backend API
+  - Created RecipientModels (RecipientResponse, GetRecipientsResponse, CreateRecipientRequest, CreateRecipientResponse, DeleteRecipientResponse)
+  - Created RecipientRepository following existing VideoRepository/UserRepository patterns
+  - Registered RecipientRepository in Hilt RepositoryModule
+  - Created RecipientsViewModel with full state management (load, refresh, add, delete)
+  - Created RecipientsScreen with:
+    - LazyColumn list of recipient cards showing name and email
+    - Empty state with People icon and instructional message
+    - Loading/error states matching existing patterns
+    - Pull-to-refresh using SwipeRefresh
+    - SwipeToDismissBox for swipe-to-delete
+    - Delete confirmation dialog
+    - FAB to add new recipients
+    - Add recipient dialog with email/name fields
+    - Client-side email validation using same regex as backend
+    - Snackbar feedback for successful adds
+  - Integrated into navigation:
+    - Added "Distribution" section to SettingsScreen with Recipients button
+    - Added showRecipients state and RecipientsScreen rendering in DeadmansDropApp
+  - Added all string resources for the recipients feature
+
+- **Files Created:**
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/RecipientApiService.kt
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/models/RecipientModels.kt
+  - android/app/src/main/java/com/deadmansdrop/app/data/repository/RecipientRepository.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/recipients/RecipientsViewModel.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/recipients/RecipientsScreen.kt
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/di/RepositoryModule.kt (added RecipientRepository provider)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/settings/SettingsScreen.kt (added Distribution section with Recipients button)
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added recipients navigation)
+  - android/app/src/main/res/values/strings.xml (added recipients strings)
+
+- **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Compose UI, Hilt DI, MutableStateFlow, Material3 components, SwipeToDismissBox, SwipeRefresh).
+
