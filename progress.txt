@@ -2881,3 +2881,42 @@ Task 140: Create WorkManager upload service (Android)
 - **Files Modified:**
   - server/src/index.ts (added path import, express.static for admin, SPA fallback, helmet CSP config)
 
+### Tasks 174-178: Backend Testing Framework (marked FINISHED) (2026-02-01)
+- Tasks 174-178 were already completed as part of earlier backend development
+- Backend testing infrastructure was fully set up:
+  - Jest 29.7.0 with ts-jest 29.1.2 configured
+  - jest.config.js with proper TypeScript, coverage, and test setup
+  - 27 test suites covering all services, routes, jobs, middleware, auth, and utils
+  - 807 tests all passing
+  - 82.68% statement coverage
+  - Test setup file with environment variables, BigInt serialization fix
+  - Mock utilities (createMockUser, createMockAdminUser, mockConfig)
+  - Test database handled via mocking (appropriate for unit test approach)
+- Marked Tasks 174-178 as FINISHED in PRD to reflect actual completion status
+
+### Task 179: Write Android ViewModel unit tests (2026-02-01)
+- Created comprehensive unit tests for all 6 Android ViewModels:
+  - **LoginViewModelTest** (14 tests): Input validation (empty fields, URL validation), login success/failure, exception handling, server URL trimming, credential manager prefill, auth state init
+  - **VideoListViewModelTest** (12 tests): Init loads videos, load/refresh success and failure, delete confirmation/cancel/success/failure, error clearing
+  - **VideoDetailViewModelTest** (14 tests): Load detail success/failure, delete confirmation/success/failure, check-in confirmation/success/failure, error/success clearing
+  - **SettingsViewModelTest** (10 tests): Init from credential manager, load settings success/failure, update timer success/failure, logout confirmation/cancel, error clearing
+  - **RecipientsViewModelTest** (14 tests): Init loads recipients, refresh success/failure, add recipient success/failure, delete confirmation/success/failure, dialog show/dismiss
+  - **AuthViewModelTest** (9 tests): Init authenticated/unauthenticated, FCM registration, logout, login success, auth events (LoggedOut, TokenRefreshed)
+- Testing patterns used:
+  - MockK for mocking dependencies
+  - Kotlin coroutines-test (StandardTestDispatcher, advanceUntilIdle)
+  - JUnit 4 assertions
+  - android.util.Patterns mocked with mockkStatic for LoginViewModel
+- Total new test count: ~73 ViewModel unit tests
+- Note: Java/Android SDK not available in CI environment; tests follow exact patterns of existing passing tests (TokenManagerTest, CredentialManagerTest)
+- Backend tests verified: 27 suites, 807 tests all passing
+- TypeScript build verified: compiles cleanly
+
+- **Files Created:**
+  - android/app/src/test/java/com/deadmansdrop/app/ui/screens/login/LoginViewModelTest.kt
+  - android/app/src/test/java/com/deadmansdrop/app/ui/screens/videos/VideoListViewModelTest.kt
+  - android/app/src/test/java/com/deadmansdrop/app/ui/screens/videos/VideoDetailViewModelTest.kt
+  - android/app/src/test/java/com/deadmansdrop/app/ui/screens/settings/SettingsViewModelTest.kt
+  - android/app/src/test/java/com/deadmansdrop/app/ui/screens/recipients/RecipientsViewModelTest.kt
+  - android/app/src/test/java/com/deadmansdrop/app/ui/auth/AuthViewModelTest.kt
+
