@@ -3,6 +3,7 @@ package com.deadmansdrop.app.data.repository
 import com.deadmansdrop.app.data.api.ApiClient
 import com.deadmansdrop.app.data.api.ApiResult
 import com.deadmansdrop.app.data.api.UserApiService
+import com.deadmansdrop.app.data.api.models.GetUserSettingsResponse
 import com.deadmansdrop.app.data.api.models.UpdateUserSettingsRequest
 import com.deadmansdrop.app.data.api.models.UpdateUserSettingsResponse
 import com.deadmansdrop.app.data.security.CredentialManager
@@ -18,6 +19,22 @@ class UserRepository(
 ) {
     private var userApiService: UserApiService? = null
     private var currentServerUrl: String? = null
+
+    /**
+     * Get current user settings from the server.
+     *
+     * @return ApiResult containing the user settings or error
+     */
+    suspend fun getUserSettings(): ApiResult<GetUserSettingsResponse> {
+        val serverUrl = credentialManager.getServerUrl()
+            ?: return ApiResult.Error("Not connected to server")
+
+        val service = getOrCreateUserApiService(serverUrl)
+
+        return ApiClient.safeApiCall {
+            service.getUserSettings()
+        }
+    }
 
     /**
      * Update user settings on the server.

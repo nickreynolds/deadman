@@ -3,6 +3,17 @@ package com.deadmansdrop.app.data.api.models
 import com.google.gson.annotations.SerializedName
 
 /**
+ * Response from GET /api/user/settings.
+ * Returns settings directly (not wrapped in a "settings" key).
+ */
+data class GetUserSettingsResponse(
+    @SerializedName("default_timer_days") val defaultTimerDays: Int,
+    @SerializedName("storage_quota_bytes") val storageQuotaBytes: Long,
+    @SerializedName("storage_used_bytes") val storageUsedBytes: Long,
+    @SerializedName("fcm_token") val fcmToken: String?
+)
+
+/**
  * Request body for PATCH /api/user/settings.
  * All fields are optional — only provided fields are updated.
  */

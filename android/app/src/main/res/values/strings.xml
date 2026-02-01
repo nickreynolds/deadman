@@ -44,4 +44,25 @@
     <!-- Notification Defaults -->
     <string name="notification_checkin_default_title">Check-in Reminder</string>
     <string name="notification_checkin_default_body">You have videos pending distribution. Tap to check in.</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_retry">Retry</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_server_label">Server</string>
+    <string name="settings_username_label">Username</string>
+    <string name="settings_section_timer">Distribution Timer</string>
+    <string name="settings_timer_label">Default Timer</string>
+    <string name="settings_timer_description">New videos will be distributed after this many days without a check-in.</string>
+    <string name="settings_timer_save">Save Timer</string>
+    <string name="settings_timer_saving">Saving…</string>
+    <string name="settings_section_storage">Storage</string>
+    <string name="settings_storage_used_label">Used</string>
+    <string name="settings_storage_quota_label">Quota</string>
+    <string name="settings_logout_button">Log Out</string>
+    <string name="settings_logout_confirm_title">Log Out?</string>
+    <string name="settings_logout_confirm_message">Are you sure you want to log out? You will need to sign in again.</string>
+    <string name="settings_logout_confirm_button">Log Out</string>
+    <string name="settings_cancel">Cancel</string>
 </resources>

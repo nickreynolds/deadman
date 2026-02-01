@@ -24,6 +24,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,6 +48,7 @@ import com.deadmansdrop.app.ui.auth.AuthViewModel
 import com.deadmansdrop.app.ui.screens.camera.CameraScreen
 import com.deadmansdrop.app.ui.screens.camera.VideoTitleDialog
 import com.deadmansdrop.app.ui.screens.login.LoginScreen
+import com.deadmansdrop.app.ui.screens.settings.SettingsScreen
 import com.deadmansdrop.app.ui.screens.upload.UploadProgressList
 import com.deadmansdrop.app.ui.screens.upload.UploadStatus
 import com.deadmansdrop.app.ui.screens.upload.UploadViewModel
@@ -125,6 +127,8 @@ private fun MainAppContent(
     val coroutineScope = rememberCoroutineScope()
     // Track whether camera screen is shown
     var showCamera by rememberSaveable { mutableStateOf(false) }
+    // Track whether settings screen is shown
+    var showSettings by rememberSaveable { mutableStateOf(false) }
     // Track whether upload progress sheet is shown
     var showUploadSheet by rememberSaveable { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -238,7 +242,15 @@ private fun MainAppContent(
         )
     }
 
-    if (showCamera) {
+    if (showSettings) {
+        SettingsScreen(
+            onBack = { showSettings = false },
+            onLogout = {
+                showSettings = false
+                onLogout()
+            }
+        )
+    } else if (showCamera) {
         CameraScreen(
             onClose = { showCamera = false },
             onVideoRecorded = { videoPath ->
@@ -315,8 +327,13 @@ private fun MainAppContent(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    TextButton(onClick = onLogout) {
-                        Text("Logout")
+                    TextButton(onClick = { showSettings = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text("Settings")
                     }
                 }
 

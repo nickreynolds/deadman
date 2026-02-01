@@ -2613,3 +2613,41 @@ Task 140: Create WorkManager upload service (Android)
   - android/app/src/main/res/drawable/ic_notification.xml (bell icon vector drawable for notifications)
 
 - **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Compose state management, Hilt DI, PendingIntent with FLAG_IMMUTABLE).
+### Task 164: Create settings screen UI for Android (2026-02-01)
+- Created a full Settings screen for the Android app with the following sections:
+  1. **Account Section** - Displays read-only server endpoint URL and username
+  2. **Distribution Timer Section** - Slider (1-30 days) to configure default distribution timer, with save button that calls PATCH /api/user/settings
+  3. **Storage Section** - Displays storage used/quota with a progress bar showing usage percentage (turns red at 90%+)
+  4. **Logout Section** - Logout button with confirmation dialog
+
+- Added GET /api/user/settings support to the Android API layer:
+  - Added getUserSettings() to UserApiService (Retrofit interface)
+  - Added GetUserSettingsResponse model to UserModels.kt
+  - Added getUserSettings() method to UserRepository
+
+- Created SettingsViewModel with Hilt DI:
+  - Loads local data (server URL, username) from CredentialManager on init
+  - Fetches settings from server via UserRepository.getUserSettings()
+  - Supports updating timer days via UserRepository.updateUserSettings()
+  - Manages logout confirmation dialog state
+  - Snackbar feedback for timer save success/error
+
+- Integrated Settings screen into app navigation:
+  - Added showSettings state to MainAppContent in DeadmansDropApp.kt
+  - Replaced direct "Logout" button with "Settings" button (with gear icon)
+  - Settings screen navigates back to main screen on back press
+  - Logout from Settings triggers AuthViewModel.logout() and returns to login
+
+- **Files Created:**
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/settings/SettingsViewModel.kt
+  - android/app/src/main/java/com/deadmansdrop/app/ui/screens/settings/SettingsScreen.kt
+
+- **Files Modified:**
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/UserApiService.kt (added GET endpoint)
+  - android/app/src/main/java/com/deadmansdrop/app/data/api/models/UserModels.kt (added GetUserSettingsResponse)
+  - android/app/src/main/java/com/deadmansdrop/app/data/repository/UserRepository.kt (added getUserSettings())
+  - android/app/src/main/java/com/deadmansdrop/app/ui/DeadmansDropApp.kt (added settings navigation, replaced logout button)
+  - android/app/src/main/res/values/strings.xml (added settings strings)
+
+- **Build Note:** Java/JDK not available in build environment. Code follows existing project patterns (Compose UI, Hilt DI, MutableStateFlow, Material3 components).
+
