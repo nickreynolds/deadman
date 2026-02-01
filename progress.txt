@@ -3019,3 +3019,37 @@ Task 140: Create WorkManager upload service (Android)
   - server/package.json (added swagger-ui-express dependency)
   - PRD.md (Task 183 status: NOT STARTED -> FINISHED)
 
+### Task 184: Create deployment guide (2026-02-01)
+- Created comprehensive deployment guide at server/DEPLOYMENT.md
+- Covers three deployment options:
+  - Option A: Docker Compose (recommended) - full stack with PostgreSQL
+  - Option B: Manual deployment with systemd/PM2
+  - Option C: Docker app container with external database
+- Complete configuration reference for all environment variables:
+  - Required: DATABASE_URL, JWT_SECRET
+  - Optional: PORT, NODE_ENV, JWT_EXPIRES_IN, STORAGE_PATH, MAX_FILE_SIZE_MB, etc.
+  - Firebase push notification variables
+  - Admin seed variables
+- NAS storage setup instructions (NFS mount, Docker bind mounts)
+- Reverse proxy configuration examples for nginx and Caddy with TLS/Let's Encrypt
+- Database backup and restore procedures
+- Update/upgrade procedures for both Docker and manual deployments
+- Health monitoring guidance
+- Troubleshooting section covering common issues:
+  - Missing environment variables
+  - Database connection failures
+  - Upload 413 errors
+  - Storage permission errors
+  - Push notification configuration
+  - Admin dashboard 404
+  - Video distribution scheduling issues
+  - Memory usage concerns
+- All 812 existing tests pass
+- TypeScript builds without errors
+
+- **Files Created:**
+  - server/DEPLOYMENT.md
+
+- **Files Modified:**
+  - PRD.md (Task 184 status: NOT STARTED -> FINISHED)
+
