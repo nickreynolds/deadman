@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.deadmansdrop.app.data.auth.AuthStateManager
 import com.deadmansdrop.app.data.security.CredentialManager
+import com.deadmansdrop.app.services.FcmTokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +35,8 @@ data class AuthState(
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val credentialManager: CredentialManager,
-    private val authStateManager: AuthStateManager
+    private val authStateManager: AuthStateManager,
+    private val fcmTokenManager: FcmTokenManager
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow(AuthState(isLoading = true))
@@ -46,6 +48,13 @@ class AuthViewModel @Inject constructor(
 
         // Listen for auth state changes (e.g., when token refresh fails)
         observeAuthStateChanges()
+
+        // Register for FCM if already authenticated (handles token refresh on app restart)
+        if (credentialManager.isAuthenticated()) {
+            viewModelScope.launch {
+                fcmTokenManager.registerForFcm()
+            }
+        }
     }
 
     /**
@@ -72,10 +81,14 @@ class AuthViewModel @Inject constructor(
 
     /**
      * Called when user successfully logs in.
-     * Updates the auth state to reflect the new credentials.
+     * Updates the auth state to reflect the new credentials
+     * and registers for FCM push notifications.
      */
     fun onLoginSuccess() {
         checkAuthState()
+        viewModelScope.launch {
+            fcmTokenManager.registerForFcm()
+        }
     }
 
     /**

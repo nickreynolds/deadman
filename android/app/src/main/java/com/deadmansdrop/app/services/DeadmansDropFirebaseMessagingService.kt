@@ -1,19 +1,27 @@
 package com.deadmansdrop.app.services
 
 import android.util.Log
+import com.deadmansdrop.app.data.security.CredentialManager
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Firebase Cloud Messaging service for handling push notifications.
  * Handles FCM token updates and incoming notification messages.
  */
+@AndroidEntryPoint
 class DeadmansDropFirebaseMessagingService : FirebaseMessagingService() {
+
+    @Inject
+    lateinit var credentialManager: CredentialManager
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d(TAG, "New FCM token received")
-        // TODO: Send token to backend via PATCH /api/user/settings
+        credentialManager.saveFcmToken(token)
+        Log.d(TAG, "FCM token saved locally, marked as unsynced")
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
